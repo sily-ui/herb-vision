@@ -1,0 +1,121 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "AI中药识别",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/identify/index",
+      "style": {
+        "navigationBarTitleText": "智能识别"
+      }
+    },
+    {
+      "path": "pages/identify/result",
+      "style": {
+        "navigationBarTitleText": "识别结果"
+      }
+    },
+    {
+      "path": "pages/knowledge/index",
+      "style": {
+        "navigationBarTitleText": "药材知识库"
+      }
+    },
+    {
+      "path": "pages/knowledge/detail",
+      "style": {
+        "navigationBarTitleText": "药材详情"
+      }
+    },
+    {
+      "path": "pages/knowledge/search",
+      "style": {
+        "navigationBarTitleText": "搜索药材"
+      }
+    },
+    {
+      "path": "pages/compare/index",
+      "style": {
+        "navigationBarTitleText": "混淆药材对比"
+      }
+    },
+    {
+      "path": "pages/learn/index",
+      "style": {
+        "navigationBarTitleText": "学习中心"
+      }
+    },
+    {
+      "path": "pages/learn/favorites",
+      "style": {
+        "navigationBarTitleText": "我的收藏"
+      }
+    },
+    {
+      "path": "pages/mine/index",
+      "style": {
+        "navigationBarTitleText": "个人中心"
+      }
+    },
+    {
+      "path": "pages/mine/records",
+      "style": {
+        "navigationBarTitleText": "识别记录"
+      }
+    },
+    {
+      "path": "pages/mine/profile",
+      "style": {
+        "navigationBarTitleText": "编辑资料"
+      }
+    },
+    {
+      "path": "pages/feedback/index",
+      "style": {
+        "navigationBarTitleText": "意见反馈"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "AI中药识别",
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "backgroundColor": "#F7F8FA"
+  },
+  "tabBar": {
+    "color": "#8796A5",
+    "selectedColor": "#2B7A78",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "static/images/tab/home.png",
+        "selectedIconPath": "static/images/tab/home-active.png"
+      },
+      {
+        "pagePath": "pages/knowledge/index",
+        "text": "知识库",
+        "iconPath": "static/images/tab/knowledge.png",
+        "selectedIconPath": "static/images/tab/knowledge-active.png"
+      },
+      {
+        "pagePath": "pages/learn/index",
+        "text": "学习",
+        "iconPath": "static/images/tab/learn.png",
+        "selectedIconPath": "static/images/tab/learn-active.png"
+      },
+      {
+        "pagePath": "pages/mine/index",
+        "text": "我的",
+        "iconPath": "static/images/tab/mine.png",
+        "selectedIconPath": "static/images/tab/mine-active.png"
+      }
+    ]
+  }
+}

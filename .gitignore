@@ -1,0 +1,40 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+
+# ===== 环境变量与密钥 =====
+.env
+.env.local
+*.env
+
+# ===== 数据库与上传文件（运行时数据）=====
+*.db
+*.sqlite3
+backend/uploads/
+backend/static/
+
+# ===== Node / 前端构建产物 =====
+node_modules/
+frontend/dist/
+frontend/unpackage/
+.cache/
+
+# ===== 编辑器 / 系统 =====
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ===== 日志 =====
+*.log
+logs/

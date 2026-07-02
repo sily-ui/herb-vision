@@ -1,0 +1,32 @@
+{
+  "name": "AI中药识别",
+  "appid": "",
+  "description": "AI智能中药材识别与学习小程序",
+  "versionName": "1.0.0",
+  "versionCode": "100",
+  "transformPx": false,
+  "mp-weixin": {
+    "appid": "",
+    "setting": {
+      "urlCheck": false,
+      "es6": true,
+      "postcss": true,
+      "minified": true
+    },
+    "usingComponents": true,
+    "permission": {
+      "scope.camera": {
+        "desc": "用于拍照识别中药材"
+      },
+      "scope.writePhotosAlbum": {
+        "desc": "用于保存识别结果图片"
+      },
+      "scope.userLocation": {
+        "desc": "用于获取用户位置信息"
+      }
+    },
+    "requiredPrivateInfos": [
+      "chooseImage"
+    ]
+  }
+}
