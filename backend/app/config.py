@@ -12,9 +12,10 @@ class Settings(BaseSettings):
     WX_APPID: str = ""
     WX_SECRET: str = ""
 
-    # AI大模型（智谱GLM）
-    ZHIPU_API_KEY: str = ""
-    ZHIPU_MODEL: str = "glm-4v"
+    # AI大模型（阶跃星辰 Step 3.7 Flash）
+    STEP_API_KEY: str = ""
+    STEP_MODEL: str = "step-3.7-flash"
+    STEP_API_URL: str = "https://api.stepfun.com/v1/chat/completions"
 
     # JWT
     JWT_SECRET: str = "secret"

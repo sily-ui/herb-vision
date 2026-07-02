@@ -2,8 +2,8 @@
  * 请求封装 - 基于 uni.request
  */
 
-// 开发环境基础地址
-const BASE_URL = 'http://localhost:8001'
+// 开发环境基础地址（与后端 FastAPI 端口一致）
+const BASE_URL = 'http://localhost:8000'
 
 // 请求超时时间
 const TIMEOUT = 30000

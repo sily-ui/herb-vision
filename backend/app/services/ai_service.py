@@ -1,4 +1,4 @@
-"""AI大模型调用服务模块"""
+"""AI大模型调用服务模块（阶跃星辰 Step 3.7 Flash）"""
 import base64
 import json
 
@@ -49,9 +49,6 @@ FUZZY_SEARCH_SYSTEM_PROMPT = """你是一位中药学专家。用户会描述一
 }
 最多返回5个最可能的药材，按置信度从高到低排列。只输出JSON，不要添加任何解释文字。"""
 
-# 智谱API地址
-ZHIPU_API_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
-
 
 async def identify_herb(image_bytes: bytes) -> dict:
     """通过图片识别中药
@@ -65,9 +62,9 @@ async def identify_herb(image_bytes: bytes) -> dict:
     # 将图片转base64
     image_base64 = base64.b64encode(image_bytes).decode("utf-8")
 
-    # 构建请求体（GLM-4V 多模态模型）
+    # 构建请求体（Step 3.7 Flash 多模态模型，兼容 OpenAI 格式）
     payload = {
-        "model": settings.ZHIPU_MODEL,
+        "model": settings.STEP_MODEL,
         "messages": [
             {
                 "role": "system",
@@ -91,13 +88,13 @@ async def identify_herb(image_bytes: bytes) -> dict:
     }
 
     headers = {
-        "Authorization": f"Bearer {settings.ZHIPU_API_KEY}",
+        "Authorization": f"Bearer {settings.STEP_API_KEY}",
         "Content-Type": "application/json",
     }
 
-    # 异步调用智谱API
+    # 异步调用阶跃星辰API
     async with httpx.AsyncClient(timeout=60.0) as client:
-        response = await client.post(ZHIPU_API_URL, json=payload, headers=headers)
+        response = await client.post(settings.STEP_API_URL, json=payload, headers=headers)
         response.raise_for_status()
         result = response.json()
 
@@ -133,7 +130,7 @@ async def fuzzy_search_by_description(description: str) -> list:
         匹配的药材列表
     """
     payload = {
-        "model": "glm-4",
+        "model": settings.STEP_MODEL,
         "messages": [
             {
                 "role": "system",
@@ -148,12 +145,12 @@ async def fuzzy_search_by_description(description: str) -> list:
     }
 
     headers = {
-        "Authorization": f"Bearer {settings.ZHIPU_API_KEY}",
+        "Authorization": f"Bearer {settings.STEP_API_KEY}",
         "Content-Type": "application/json",
     }
 
     async with httpx.AsyncClient(timeout=30.0) as client:
-        response = await client.post(ZHIPU_API_URL, json=payload, headers=headers)
+        response = await client.post(settings.STEP_API_URL, json=payload, headers=headers)
         response.raise_for_status()
         result = response.json()
 
