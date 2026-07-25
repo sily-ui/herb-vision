@@ -120,6 +120,152 @@ async def identify_herb(image_bytes: bytes) -> dict:
     return identify_result
 
 
+AI_COMPARE_SYSTEM_PROMPT = """你是一位资深中药鉴定专家，精通《中国药典》标准。请对以下两种中药材进行专业对比分析，按以下JSON格式输出（不要输出任何其他内容，只输出纯JSON）：
+{
+  "summary": "一段话总结两者核心区别，便于快速辨识",
+  "comparisons": [
+    {
+      "field": "外观特征",
+      "field_en": "appearance",
+      "herb1": "药材1的具体外观描述",
+      "herb2": "药材2的具体外观描述",
+      "difference": "两者的外观区别要点"
+    },
+    {
+      "field": "质地断面",
+      "field_en": "texture",
+      "herb1": "药材1的质地断面描述",
+      "herb2": "药材2的质地断面描述",
+      "difference": "两者的质地断面区别要点"
+    },
+    {
+      "field": "气味",
+      "field_en": "odor",
+      "herb1": "药材1的气味描述",
+      "herb2": "药材2的气味描述",
+      "difference": "两者的气味区别要点"
+    },
+    {
+      "field": "功效主治",
+      "field_en": "efficacy",
+      "herb1": "药材1的功效主治",
+      "herb2": "药材2的功效主治",
+      "difference": "两者的功效主治区别要点"
+    },
+    {
+      "field": "真伪鉴别",
+      "field_en": "authenticity",
+      "herb1": "药材1的真伪鉴别要点",
+      "herb2": "药材2的真伪鉴别要点",
+      "difference": "两者真伪鉴别上的区别要点"
+    },
+    {
+      "field": "临床注意",
+      "field_en": "clinical_notes",
+      "herb1": "药材1的临床使用注意",
+      "herb2": "药材2的临床使用注意",
+      "difference": "两者临床使用上的区别注意"
+    }
+  ]
+}
+
+注意事项：
+1. 严格按中国药典和临床常规表述，不要夸大疗效
+2. 每个字段都要给出可操作的鉴别差异，不要写空泛套话
+3. 如果某一字段信息不足，请写"暂无明确记载"
+4. summary 控制在100字以内，直击要害
+5. 只输出JSON，不要添加任何解释文字"""
+
+
+async def ai_compare_herbs(herb1: dict, herb2: dict) -> dict:
+    """调用大模型对两种药材进行智能对比
+
+    Args:
+        herb1: 药材1字典
+        herb2: 药材2字典
+
+    Returns:
+        结构化对比结果字典
+    """
+    payload = {
+        "model": settings.STEP_MODEL,
+        "messages": [
+            {
+                "role": "system",
+                "content": AI_COMPARE_SYSTEM_PROMPT,
+            },
+            {
+                "role": "user",
+                "content": f"""请对以下两种中药材进行专业对比：
+
+药材1：{herb1.get('name', '未知')}
+- 来源：{herb1.get('source', '')}
+- 性味：{herb1.get('nature_taste', '')}
+- 归经：{herb1.get('meridian_tropism', '')}
+- 功效：{herb1.get('efficacy', '')}
+- 性状：颜色{herb1.get('appearance_color', '')}，质地{herb1.get('appearance_texture', '')}，断面{herb1.get('appearance_fracture', '')}，气味{herb1.get('appearance_odor', '')}
+- 鉴别要点：{herb1.get('authenticity_tips', '')}
+- 禁忌：{herb1.get('contraindications', '')}
+
+药材2：{herb2.get('name', '未知')}
+- 来源：{herb2.get('source', '')}
+- 性味：{herb2.get('nature_taste', '')}
+- 归经：{herb2.get('meridian_tropism', '')}
+- 功效：{herb2.get('efficacy', '')}
+- 性状：颜色{herb2.get('appearance_color', '')}，质地{herb2.get('appearance_texture', '')}，断面{herb2.get('appearance_fracture', '')}，气味{herb2.get('appearance_odor', '')}
+- 鉴别要点：{herb2.get('authenticity_tips', '')}
+- 禁忌：{herb2.get('contraindications', '')}""",
+            },
+        ],
+        "temperature": 0.3,
+    }
+
+    headers = {
+        "Authorization": f"Bearer {settings.STEP_API_KEY}",
+        "Content-Type": "application/json",
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(settings.STEP_API_URL, json=payload, headers=headers)
+            response.raise_for_status()
+            result = response.json()
+
+        content = result["choices"][0]["message"]["content"]
+
+        try:
+            content = content.strip()
+            if content.startswith("```json"):
+                content = content[7:]
+            if content.startswith("```"):
+                content = content[3:]
+            if content.endswith("```"):
+                content = content[:-3]
+            content = content.strip()
+
+            compare_result = json.loads(content)
+            return compare_result
+        except json.JSONDecodeError:
+            return {
+                "summary": content[:200],
+                "comparisons": [],
+                "parse_error": True,
+                "raw_response": content,
+            }
+    except httpx.HTTPStatusError as exc:
+        return {
+            "summary": f"大模型请求失败：{exc.response.status_code}",
+            "comparisons": [],
+            "error": True,
+        }
+    except Exception as exc:
+        return {
+            "summary": f"智能对比失败：{str(exc)}",
+            "comparisons": [],
+            "error": True,
+        }
+
+
 async def fuzzy_search_by_description(description: str) -> list:
     """通过外观描述模糊搜索药材
 

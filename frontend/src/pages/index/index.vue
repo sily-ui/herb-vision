@@ -1,102 +1,85 @@
 <template>
   <view class="page-index">
-    <!-- 自定义导航栏 -->
-    <view class="nav-bar">
-      <view class="nav-bar__content">
-        <text class="nav-bar__title">AI中药识别</text>
+    <!-- 顶部品牌区：竖排辅助文字 + 大字标题 -->
+    <view class="hero">
+      <view class="hero__meta">
+        <text class="hero__meta-line"></text>
+        <text class="hero__meta-text">BĚN CǍO · 本草</text>
+      </view>
+      <view class="hero__title-wrap">
+        <text class="hero__title">识草木</text>
+        <text class="hero__title hero__title--accent">知本草</text>
+      </view>
+      <text class="hero__sub">AI 智能中药材鉴别 · {{ todayStr }}</text>
+    </view>
+
+    <!-- 识别入口：拍摄 / 相册 -->
+    <view class="identify-row">
+      <view class="identify-card identify-card--camera" @click="onTakePhoto">
+        <text class="identify-card__icon">&#x1F4F7;</text>
+        <view class="identify-card__body">
+          <text class="identify-card__name">即时拍摄</text>
+          <text class="identify-card__desc">打开相机拍摄药材</text>
+        </view>
+      </view>
+      <view class="identify-card identify-card--album" @click="onFromAlbum">
+        <text class="identify-card__icon">&#x1F4BE;</text>
+        <view class="identify-card__body">
+          <text class="identify-card__name">相册选取</text>
+          <text class="identify-card__desc">从相册选择图片</text>
+        </view>
       </view>
     </view>
 
-    <!-- 顶部欢迎语+搜索栏 -->
-    <view class="header">
-      <view class="header__welcome">
-        <text class="header__greeting">你好，{{ userName }}</text>
-        <text class="header__desc">拍照识别中药材，获取详细信息</text>
-      </view>
-      <SearchBar placeholder="搜索药材名称、功效..." @search="onSearch" />
-    </view>
-
-    <!-- 识别入口按钮 -->
-    <view class="identify-actions">
-      <view class="identify-actions__item identify-actions__item--camera" @click="goCamera">
-        <text class="identify-actions__icon">&#x1F4F7;</text>
-        <text class="identify-actions__name">拍照识别</text>
-        <text class="identify-actions__desc">打开相机拍摄药材</text>
-      </view>
-      <view class="identify-actions__item identify-actions__item--album" @click="goAlbum">
-        <text class="identify-actions__icon">&#x1F5BC;</text>
-        <text class="identify-actions__name">相册上传</text>
-        <text class="identify-actions__desc">从相册选择图片识别</text>
-      </view>
-    </view>
-
-    <!-- 常见混淆药材快捷对比 -->
+    <!-- 分隔：今日推荐 -->
     <view class="section">
-      <view class="section__header">
-        <text class="section__title">常见混淆药材</text>
-        <text class="section__more" @click="goCompare">更多 &#x276F;</text>
+      <view class="section__head">
+        <view class="section__title-wrap">
+          <text class="section__bar"></text>
+          <text class="section__title">易混药材</text>
+        </view>
+        <text class="section__more" @click="goCompare">查看全部 →</text>
       </view>
-      <view class="compare-list">
+
+      <view class="compare-table">
         <view
-          class="compare-item"
+          class="compare-row"
           v-for="(item, index) in comparePairs"
           :key="index"
           @click="goCompareDetail(item)"
         >
-          <view class="compare-item__left">
-            <text class="compare-item__name">{{ item.name1 }}</text>
+          <text class="compare-row__idx">{{ String(index + 1).padStart(2, '0') }}</text>
+          <text class="compare-row__name">{{ item.name1 }}</text>
+          <view class="compare-row__vs">
+            <text class="compare-row__vs-text">易混</text>
           </view>
-          <text class="compare-item__vs">VS</text>
-          <view class="compare-item__right">
-            <text class="compare-item__name">{{ item.name2 }}</text>
-          </view>
+          <text class="compare-row__name compare-row__name--alt">{{ item.name2 }}</text>
+          <text class="compare-row__arrow">→</text>
         </view>
       </view>
     </view>
 
-    <!-- 最近识别记录 -->
-    <view class="section">
-      <view class="section__header">
-        <text class="section__title">最近识别</text>
-        <text class="section__more" @click="goRecords">全部 &#x276F;</text>
-      </view>
-      <scroll-view class="recent-scroll" scroll-x enable-flex v-if="recentRecords.length">
-        <view
-          class="recent-item"
-          v-for="(item, index) in recentRecords"
-          :key="index"
-          @click="goDetail(item)"
-        >
-          <image :src="item.image || '/static/images/placeholder.png'" mode="aspectFill" class="recent-item__img" />
-          <text class="recent-item__name">{{ item.name }}</text>
-        </view>
-      </scroll-view>
-      <view class="empty-tip" v-else>
-        <text class="empty-tip__text">暂无识别记录，快去识别吧</text>
-      </view>
+    <!-- 留白尾韵 -->
+    <view class="epilogue">
+      <view class="epilogue__line"></view>
+      <text class="epilogue__text">— 凡药之用，必明其真 —</text>
     </view>
   </view>
 </template>
 
 <script setup>
 /**
- * 首页
- * 顶部欢迎语+搜索栏，识别入口按钮，常见混淆药材对比，最近识别记录
+ * 首页 · 墨韵版
+ * 极简东方美学：朱砂印章 + 竖排辅助 + 衬线数字
  */
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/store/user'
-import { useHerbStore } from '@/store/herb'
-import { getRecords } from '@/api/user'
-import SearchBar from '@/components/SearchBar.vue'
+import { identifyImage } from '@/api/identify'
+import { compressImage } from '@/utils/common'
 
 const userStore = useUserStore()
-const herbStore = useHerbStore()
-
-const userName = ref('药友')
-const recentRecords = ref([])
-
-// 常见混淆药材对
+const uploading = ref(false)
 const comparePairs = ref([
   { name1: '赤芍', name2: '白芍', id1: 1, id2: 2 },
   { name1: '黄芪', name2: '红芪', id1: 3, id2: 4 },
@@ -105,278 +88,384 @@ const comparePairs = ref([
   { name1: '人参', name2: '党参', id1: 9, id2: 10 }
 ])
 
+const todayStr = computed(() => {
+  const d = new Date()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}.${m}.${day}`
+})
+
 onShow(() => {
-  if (userStore.isLogin) {
-    userName.value = userStore.nickname
-    loadRecentRecords()
+  // 静默登录：未登录时自动获取微信 token
+  userStore.checkLogin()
+  if (!userStore.isLogin) {
+    userStore.login().catch(() => {})
   }
 })
 
-/**
- * 加载最近识别记录
- */
-async function loadRecentRecords() {
+function onTakePhoto() {
+  chooseAndIdentify('camera')
+}
+
+function onFromAlbum() {
+  chooseAndIdentify('album')
+}
+
+function chooseAndIdentify(sourceType) {
+  if (uploading.value) return
+  uni.chooseImage({
+    count: 1,
+    sizeType: ['compressed'],
+    sourceType: [sourceType],
+    success: (res) => identifySingleImage(res.tempFilePaths[0]),
+    fail: (err) => {
+      if (err.errMsg && !err.errMsg.includes('cancel')) {
+        uni.showToast({ title: '选择图片失败', icon: 'none' })
+      }
+    }
+  })
+}
+
+async function identifySingleImage(imagePath) {
+  if (uploading.value) return
+  uploading.value = true
+  uni.showLoading({ title: '鉴别中…', mask: true })
   try {
-    const data = await getRecords({ page: 1, pageSize: 5 })
-    recentRecords.value = data.list || []
-  } catch (err) {
-    // 静默处理
-  }
-}
-
-/**
- * 搜索
- */
-function onSearch(keyword) {
-  herbStore.addSearchHistory(keyword)
-  uni.navigateTo({
-    url: `/pages/knowledge/search?keyword=${encodeURIComponent(keyword)}`
-  })
-}
-
-/**
- * 拍照识别
- */
-function goCamera() {
-  uni.navigateTo({
-    url: '/pages/identify/index?source=camera'
-  })
-}
-
-/**
- * 相册识别
- */
-function goAlbum() {
-  uni.navigateTo({
-    url: '/pages/identify/index?source=album'
-  })
-}
-
-/**
- * 跳转对比页
- */
-function goCompare() {
-  uni.navigateTo({
-    url: '/pages/compare/index'
-  })
-}
-
-/**
- * 跳转对比详情
- */
-function goCompareDetail(item) {
-  uni.navigateTo({
-    url: `/pages/compare/index?id1=${item.id1}&id2=${item.id2}`
-  })
-}
-
-/**
- * 跳转识别记录
- */
-function goRecords() {
-  uni.navigateTo({
-    url: '/pages/mine/records'
-  })
-}
-
-/**
- * 跳转药材详情
- */
-function goDetail(item) {
-  if (item.herbId) {
+    const compressedPath = await compressImage(imagePath)
+    const result = await identifyImage(compressedPath)
     uni.navigateTo({
-      url: `/pages/knowledge/detail?id=${item.herbId}`
+      url: `/pages/identify/result?data=${encodeURIComponent(JSON.stringify(result))}`
     })
+  } catch (err) {
+    uni.showToast({ title: '鉴别失败，请重试', icon: 'none' })
+  } finally {
+    uploading.value = false
+    uni.hideLoading()
   }
+}
+
+function goCompare() {
+  uni.navigateTo({ url: '/pages/compare/index' })
+}
+function goCompareDetail(item) {
+  uni.navigateTo({ url: `/pages/compare/index?id1=${item.id1}&id2=${item.id2}` })
 }
 </script>
 
 <style lang="scss" scoped>
 .page-index {
   min-height: 100vh;
-  background-color: $bg-color;
+  background-color: $paper;
+  padding: 0 $space-lg $space-3xl;
 }
 
-/* 自定义导航栏 */
-.nav-bar {
-  background: linear-gradient(135deg, $primary-color, $secondary-color);
-  padding-top: var(--status-bar-height, 44rpx);
+/* ===== Hero 品牌区 ===== */
+.hero {
+  padding: $space-2xl 0 $space-xl;
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
 
-  &__content {
-    height: 88rpx;
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+  }
+
+  &__meta-line {
+    width: 48rpx;
+    height: 1rpx;
+    background-color: $ink-light;
+  }
+
+  &__meta-text {
+    font-size: $font-xs;
+    color: $ink-light;
+    letter-spacing: 4rpx;
+    text-transform: uppercase;
+    font-weight: $weight-medium;
+  }
+
+  &__title-wrap {
+    display: flex;
+    align-items: baseline;
+    gap: $space-md;
+    margin-top: $space-xs;
+  }
+
+  &__title {
+    font-size: 96rpx;
+    font-weight: $weight-bold;
+    color: $ink;
+    letter-spacing: 8rpx;
+    line-height: 1.1;
+
+    &--accent {
+      color: $cinnabar;
+      font-weight: $weight-light;
+    }
+  }
+
+  &__sub {
+    font-size: $font-sm;
+    color: $ink-light;
+    letter-spacing: 2rpx;
+    margin-top: $space-xs;
+  }
+}
+
+/* ===== 主识别入口（朱砂印章） ===== */
+.primary-action {
+  display: flex;
+  align-items: center;
+  background-color: $card;
+  padding: $space-lg;
+  margin-top: $space-lg;
+  border: 1rpx solid $line;
+  border-radius: $radius-md;
+  gap: $space-md;
+  position: relative;
+  transition: all 0.2s;
+
+  &:active {
+    background-color: $paper-warm;
+  }
+
+  &__seal {
+    width: 96rpx;
+    height: 96rpx;
+    background-color: $cinnabar;
+    border-radius: $radius-sm;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 4rpx 12rpx rgba(168, 54, 47, 0.25);
   }
 
-  &__title {
-    font-size: $font-xl;
-    font-weight: 600;
+  &__seal-char {
+    font-family: $font-serif;
+    font-size: 56rpx;
     color: #FFFFFF;
-  }
-}
-
-/* 头部区域 */
-.header {
-  background: linear-gradient(135deg, $primary-color, $secondary-color);
-  padding: 0 $spacing-lg $spacing-xl;
-  border-radius: 0 0 $spacing-lg $spacing-lg;
-
-  &__welcome {
-    margin-bottom: $spacing-md;
+    font-weight: $weight-bold;
+    line-height: 1;
   }
 
-  &__greeting {
-    font-size: $font-xl;
-    font-weight: 600;
-    color: #FFFFFF;
-    display: block;
-  }
-
-  &__desc {
-    font-size: $font-sm;
-    color: $accent-color;
-    display: block;
-    margin-top: $spacing-xs;
-  }
-}
-
-/* 识别入口按钮 */
-.identify-actions {
-  display: flex;
-  gap: $spacing-md;
-  padding: $spacing-lg;
-  margin: -$spacing-lg $spacing-lg 0;
-  position: relative;
-  z-index: 1;
-
-  &__item {
+  &__body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    padding: $spacing-lg $spacing-md;
-    border-radius: $radius-lg;
-    box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
-    gap: $spacing-xs;
-
-    &--camera {
-      background: linear-gradient(135deg, $primary-color, #3AAFA9);
-    }
-
-    &--album {
-      background: linear-gradient(135deg, #3AAFA9, $secondary-color);
-    }
-  }
-
-  &__icon {
-    font-size: 64rpx;
-  }
-
-  &__name {
-    font-size: $font-lg;
-    font-weight: 600;
-    color: #FFFFFF;
-  }
-
-  &__desc {
-    font-size: $font-xs;
-    color: $accent-color;
-  }
-}
-
-/* 通用板块 */
-.section {
-  padding: $spacing-lg;
-
-  &__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: $spacing-md;
+    gap: $space-xxs;
   }
 
   &__title {
     font-size: $font-lg;
-    font-weight: 600;
-    color: $text-color;
+    font-weight: $weight-semibold;
+    color: $ink;
+    letter-spacing: 2rpx;
   }
 
-  &__more {
+  &__desc {
     font-size: $font-sm;
-    color: $text-secondary;
+    color: $ink-light;
+  }
+
+  &__arrow {
+    font-size: $font-lg;
+    color: $ink-light;
   }
 }
 
-/* 混淆药材对比 */
-.compare-list {
+/* ===== 次级入口 ===== */
+.identify-row {
+  display: flex;
+  gap: $space-md;
+  margin-top: $space-lg;
+}
+
+.identify-card {
+  flex: 1;
+  padding: $space-xl $space-md;
+  border-radius: $radius-md;
   display: flex;
   flex-direction: column;
-  gap: $spacing-sm;
-}
-
-.compare-item {
-  display: flex;
   align-items: center;
-  justify-content: space-between;
-  background-color: $card-bg;
-  border-radius: $radius-md;
-  padding: $spacing-md $spacing-lg;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+  gap: $space-sm;
+  transition: all 0.2s;
 
-  &__left, &__right {
-    flex: 1;
+  &:active {
+    opacity: 0.85;
+    transform: scale(0.98);
+  }
+
+  &--camera {
+    background-color: $ink;
+  }
+
+  &--album {
+    background-color: $card;
+    border: 1rpx solid $line;
+  }
+
+  &__icon {
+    font-size: 56rpx;
+    line-height: 1;
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space-xs;
   }
 
   &__name {
     font-size: $font-md;
-    font-weight: 500;
-    color: $text-color;
+    font-weight: $weight-semibold;
+    letter-spacing: 2rpx;
+
+    .identify-card--camera & {
+      color: #FFFFFF;
+    }
+
+    .identify-card--album & {
+      color: $ink;
+    }
   }
 
-  &__vs {
+  &__desc {
+    font-size: $font-xs;
+
+    .identify-card--camera & {
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .identify-card--album & {
+      color: $ink-light;
+    }
+  }
+}
+
+/* ===== 通用 section ===== */
+.section {
+  margin-top: $space-2xl;
+
+  &__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: $space-md;
+  }
+
+  &__title-wrap {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+  }
+
+  &__bar {
+    width: 4rpx;
+    height: 28rpx;
+    background-color: $cinnabar;
+  }
+
+  &__title {
+    font-size: $font-lg;
+    font-weight: $weight-semibold;
+    color: $ink;
+    letter-spacing: 2rpx;
+  }
+
+  &__more {
     font-size: $font-sm;
-    color: $danger-color;
-    font-weight: 600;
-    padding: 0 $spacing-md;
+    color: $ink-light;
+    letter-spacing: 1rpx;
   }
 }
 
-/* 最近识别 */
-.recent-scroll {
-  white-space: nowrap;
+/* ===== 易混药材表格 ===== */
+.compare-table {
+  background-color: $card;
+  border: 1rpx solid $line;
+  border-radius: $radius-md;
+  overflow: hidden;
 }
 
-.recent-item {
-  display: inline-flex;
-  flex-direction: column;
+.compare-row {
+  display: flex;
   align-items: center;
-  width: 160rpx;
-  margin-right: $spacing-md;
-  flex-shrink: 0;
+  padding: $space-md $space-lg;
+  gap: $space-sm;
+  border-bottom: 1rpx solid $line-soft;
 
-  &__img {
-    width: 160rpx;
-    height: 160rpx;
-    border-radius: $radius-md;
-    background-color: $border-color;
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:active {
+    background-color: $paper-warm;
+  }
+
+  &__idx {
+    font-family: $font-serif;
+    font-size: $font-sm;
+    color: $gold;
+    width: 40rpx;
+    font-weight: $weight-medium;
   }
 
   &__name {
+    font-size: $font-md;
+    color: $ink;
+    font-weight: $weight-medium;
+    letter-spacing: 1rpx;
+
+    &--alt {
+      color: $ink-soft;
+      font-weight: $weight-regular;
+    }
+  }
+
+  &__vs {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+  }
+
+  &__vs-text {
+    font-size: $font-xs;
+    color: $cinnabar;
+    padding: 2rpx 12rpx;
+    border: 1rpx solid $cinnabar;
+    border-radius: $radius-xs;
+    letter-spacing: 2rpx;
+  }
+
+  &__arrow {
     font-size: $font-sm;
-    color: $text-color;
-    margin-top: $spacing-xs;
+    color: $ink-faint;
   }
 }
 
-/* 空状态 */
-.empty-tip {
-  padding: $spacing-xl 0;
-  text-align: center;
+/* ===== 尾韵 ===== */
+.epilogue {
+  margin-top: $space-3xl;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-md;
+
+  &__line {
+    width: 64rpx;
+    height: 1rpx;
+    background-color: $line-strong;
+  }
 
   &__text {
+    font-family: $font-serif;
     font-size: $font-sm;
-    color: $text-secondary;
+    color: $ink-light;
+    letter-spacing: 4rpx;
   }
 }
 </style>

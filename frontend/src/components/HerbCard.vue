@@ -1,18 +1,23 @@
 <template>
   <view class="herb-card" @click="handleClick">
-    <!-- 缩略图 -->
+    <!-- 图：方图 + 编号水印 -->
     <view class="herb-card__image">
       <image
-        :src="herb.image || '/static/images/placeholder.png'"
+        :src="herb.image_main || '/static/images/placeholder.png'"
         mode="aspectFill"
         class="herb-card__img"
+        @error="onImageError"
       />
+      <view class="herb-card__num" v-if="herb.id">
+        <text class="herb-card__num-text">No.{{ String(herb.id).padStart(3, '0') }}</text>
+      </view>
     </view>
     <!-- 信息区 -->
     <view class="herb-card__info">
-      <text class="herb-card__name">{{ herb.name || '未知药材' }}</text>
-      <text class="herb-card__family">{{ herb.family || '' }}</text>
-      <!-- 功效标签 -->
+      <view class="herb-card__name-row">
+        <text class="herb-card__name">{{ herb.name || '未知药材' }}</text>
+        <text class="herb-card__family" v-if="herb.family">{{ herb.family }}</text>
+      </view>
       <view class="herb-card__tags" v-if="herb.effects && herb.effects.length">
         <text
           class="herb-card__tag"
@@ -25,26 +30,30 @@
 </template>
 
 <script setup>
-/**
- * 药材卡片组件
- * 展示缩略图、名称、科属、功效标签，点击跳转详情
- */
 const props = defineProps({
   herb: {
     type: Object,
     default: () => ({})
+  },
+  navigate: {
+    type: Boolean,
+    default: true
   }
 })
 
 const emit = defineEmits(['click'])
 
 function handleClick() {
-  if (props.herb.id) {
+  if (props.navigate && props.herb.id) {
     uni.navigateTo({
       url: `/pages/knowledge/detail?id=${props.herb.id}`
     })
   }
   emit('click', props.herb)
+}
+
+function onImageError() {
+  // 图片加载失败时不做处理，依赖 CSS 背景色显示占位效果
 }
 </script>
 
@@ -52,15 +61,22 @@ function handleClick() {
 .herb-card {
   display: flex;
   flex-direction: column;
-  background-color: $card-bg;
+  background-color: $card;
+  border: 1rpx solid $line;
   border-radius: $radius-md;
   overflow: hidden;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+
+  &:active {
+    background-color: $paper-warm;
+  }
 
   &__image {
     width: 100%;
-    height: 240rpx;
+    height: 200rpx;
     overflow: hidden;
+    position: relative;
+    background-color: $paper-deep;
   }
 
   &__img {
@@ -68,37 +84,64 @@ function handleClick() {
     height: 100%;
   }
 
+  &__num {
+    position: absolute;
+    top: $space-sm;
+    left: $space-sm;
+    padding: 2rpx 8rpx;
+    background-color: rgba(250, 248, 243, 0.85);
+    backdrop-filter: blur(4rpx);
+    border-radius: $radius-xs;
+  }
+
+  &__num-text {
+    font-family: $font-serif;
+    font-size: $font-xs;
+    color: $ink-soft;
+    letter-spacing: 1rpx;
+    font-weight: $weight-medium;
+  }
+
   &__info {
-    padding: $spacing-sm $spacing-md;
+    padding: $space-sm $space-md $space-md;
     display: flex;
     flex-direction: column;
-    gap: $spacing-xs;
+    gap: $space-xs;
+  }
+
+  &__name-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: $space-xs;
   }
 
   &__name {
-    font-size: $font-lg;
-    font-weight: 600;
-    color: $text-color;
+    font-size: $font-md;
+    font-weight: $weight-semibold;
+    color: $ink;
+    letter-spacing: 1rpx;
   }
 
   &__family {
-    font-size: $font-sm;
-    color: $text-secondary;
+    font-size: $font-xs;
+    color: $ink-light;
+    flex-shrink: 0;
   }
 
   &__tags {
     display: flex;
     flex-wrap: wrap;
-    gap: $spacing-xs;
-    margin-top: $spacing-xs;
+    gap: $space-xxs;
   }
 
   &__tag {
     font-size: $font-xs;
-    color: $primary-color;
-    background-color: $accent-color;
-    padding: 4rpx 12rpx;
-    border-radius: $radius-sm;
+    color: $bamboo;
+    background-color: $bamboo-soft;
+    padding: 2rpx 10rpx;
+    border-radius: $radius-xs;
+    letter-spacing: 1rpx;
   }
 }
 </style>

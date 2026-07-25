@@ -30,81 +30,52 @@
 
     <!-- 对比区域 -->
     <view class="compare-area" v-if="herb1.id && herb2.id">
-      <!-- 图片对比 -->
+      <!-- 外观对比 -->
       <view class="compare-card">
         <text class="compare-card__title">外观对比</text>
         <view class="compare-images">
           <view class="compare-images__item">
-            <image :src="herb1.image || '/static/images/placeholder.png'" mode="aspectFill" class="compare-images__img" />
+            <image :src="herb1.image_main || '/static/images/placeholder.png'" mode="aspectFill" class="compare-images__img" @error="onImageError(1)" />
             <text class="compare-images__name">{{ herb1.name }}</text>
           </view>
           <view class="compare-images__item">
-            <image :src="herb2.image || '/static/images/placeholder.png'" mode="aspectFill" class="compare-images__img" />
+            <image :src="herb2.image_main || '/static/images/placeholder.png'" mode="aspectFill" class="compare-images__img" @error="onImageError(2)" />
             <text class="compare-images__name">{{ herb2.name }}</text>
           </view>
         </view>
       </view>
 
-      <!-- 性状对比 -->
-      <view class="compare-card">
-        <text class="compare-card__title">性状对比</text>
-        <view class="compare-table">
-          <view class="compare-table__header">
-            <text class="compare-table__th">特征</text>
-            <text class="compare-table__th">{{ herb1.name }}</text>
-            <text class="compare-table__th">{{ herb2.name }}</text>
-          </view>
-          <view class="compare-table__row">
-            <text class="compare-table__td">颜色</text>
-            <text class="compare-table__td">{{ herb1.appearance?.color || '-' }}</text>
-            <text class="compare-table__td">{{ herb2.appearance?.color || '-' }}</text>
-          </view>
-          <view class="compare-table__row">
-            <text class="compare-table__td">质地</text>
-            <text class="compare-table__td">{{ herb1.appearance?.texture || '-' }}</text>
-            <text class="compare-table__td">{{ herb2.appearance?.texture || '-' }}</text>
-          </view>
-          <view class="compare-table__row">
-            <text class="compare-table__td">断面</text>
-            <text class="compare-table__td">{{ herb1.appearance?.fracture || '-' }}</text>
-            <text class="compare-table__td">{{ herb2.appearance?.fracture || '-' }}</text>
-          </view>
-          <view class="compare-table__row">
-            <text class="compare-table__td">气味</text>
-            <text class="compare-table__td">{{ herb1.appearance?.odor || '-' }}</text>
-            <text class="compare-table__td">{{ herb2.appearance?.odor || '-' }}</text>
+      <!-- AI 智能对比 -->
+      <view class="compare-card" v-if="aiCompareResult">
+        <text class="compare-card__title">AI 智能对比</text>
+
+        <view class="ai-loading" v-if="aiLoading">
+          <text>正在调用大模型生成专业对比，请稍候...</text>
+        </view>
+
+        <view v-else>
+          <text class="ai-summary">{{ aiCompareResult.summary }}</text>
+
+          <view class="ai-comparison" v-for="(item, index) in aiCompareResult.comparisons" :key="index">
+            <text class="comparison-field">{{ item.field }}</text>
+            <view class="comparison-content">
+              <text class="comparison-herb1">{{ herb1.name }}：{{ item.herb1 }}</text>
+              <text class="comparison-herb2">{{ herb2.name }}：{{ item.herb2 }}</text>
+              <text class="comparison-diff">区别要点：{{ item.difference }}</text>
+            </view>
           </view>
         </view>
       </view>
 
-      <!-- 鉴别要点对比 -->
-      <view class="compare-card">
-        <text class="compare-card__title">鉴别要点</text>
-        <view class="compare-text">
-          <view class="compare-text__item">
-            <text class="compare-text__name">{{ herb1.name }}</text>
-            <text class="compare-text__content">{{ herb1.authentication || '暂无' }}</text>
-          </view>
-          <view class="compare-text__item">
-            <text class="compare-text__name">{{ herb2.name }}</text>
-            <text class="compare-text__content">{{ herb2.authentication || '暂无' }}</text>
+      <view class="compare-card" v-else-if="!aiLoading">
+        <text class="compare-card__title">AI 智能对比</text>
+        <view v-if="aiError" class="ai-error">
+          <text class="ai-error__text">{{ aiError }}</text>
+          <view class="ai-error__retry" @click="loadAiCompare">
+            <text class="ai-error__retry-text">点击重试</text>
           </view>
         </view>
-      </view>
-
-      <!-- 功效对比 -->
-      <view class="compare-card">
-        <text class="compare-card__title">功效对比</text>
-        <view class="compare-text">
-          <view class="compare-text__item">
-            <text class="compare-text__name">{{ herb1.name }}</text>
-            <text class="compare-text__content">{{ herb1.efficacy || '暂无' }}</text>
-          </view>
-          <view class="compare-text__item">
-            <text class="compare-text__name">{{ herb2.name }}</text>
-            <text class="compare-text__content">{{ herb2.efficacy || '暂无' }}</text>
-          </view>
-        </view>
+        <text v-else class="compare-placeholder">暂无智能对比结果</text>
       </view>
     </view>
   </view>
@@ -113,14 +84,17 @@
 <script setup>
 /**
  * 混淆药材对比页
- * 两个药材选择、快捷对比、详细对比
+ * 两个药材选择、快捷对比、AI 智能对比
  */
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { compareHerbs, getHerbDetail } from '@/api/knowledge'
+import { compareHerbs, getHerbDetail, aiCompareHerbs } from '@/api/knowledge'
 
 const herb1 = ref({})
 const herb2 = ref({})
+const aiCompareResult = ref(null)
+const aiLoading = ref(false)
+const aiError = ref('')
 
 // 常见混淆对
 const commonPairs = ref([
@@ -133,20 +107,19 @@ const commonPairs = ref([
 
 onLoad((query) => {
   if (query.id1 && query.id2) {
-    loadCompare(query.id1, query.id2)
+    loadCompare(query.id1, query.id2).then(() => loadAiCompare())
   }
 })
 
 /**
- * 加载对比数据
+ * 加载基础对比数据
  */
 async function loadCompare(id1, id2) {
   try {
     const data = await compareHerbs(id1, id2)
-    herb1.value = data.herb1 || {}
-    herb2.value = data.herb2 || {}
+    herb1.value = data.herb_1 || data.herb1 || {}
+    herb2.value = data.herb_2 || data.herb2 || {}
   } catch (err) {
-    // 如果对比接口失败，分别获取详情
     try {
       const [d1, d2] = await Promise.all([getHerbDetail(id1), getHerbDetail(id2)])
       herb1.value = d1 || {}
@@ -158,21 +131,66 @@ async function loadCompare(id1, id2) {
 }
 
 /**
+ * 调用大模型生成智能对比
+ */
+async function loadAiCompare() {
+  if (!herb1.value.id || !herb2.value.id) {
+    return
+  }
+  aiLoading.value = true
+  aiCompareResult.value = null
+  aiError.value = ''
+
+  try {
+    const data = await aiCompareHerbs(herb1.value.id, herb2.value.id)
+    aiCompareResult.value = data.ai_compare || null
+    if (!aiCompareResult.value) {
+      aiError.value = '未获取到对比结果'
+    }
+  } catch (err) {
+    aiError.value = err.message || '智能对比失败'
+    uni.showToast({ title: '智能对比失败', icon: 'none' })
+  } finally {
+    aiLoading.value = false
+  }
+}
+
+/**
  * 选择药材
  */
 function onSelectHerb(side) {
-  // 跳转到搜索页选择药材
   uni.navigateTo({
     url: `/pages/knowledge/search?select=compare${side}`
   })
 }
 
 /**
- * 快捷对比
+ * 选择页返回后回填药材
  */
-function onQuickPair(item) {
-  loadCompare(item.id1, item.id2)
+function onHerbSelected(side, herb) {
+  if (side === 1) {
+    herb1.value = herb || {}
+  } else if (side === 2) {
+    herb2.value = herb || {}
+  }
+  if (herb1.value.id && herb2.value.id) {
+    loadAiCompare()
+  }
 }
+
+/**
+ * 快捷对比：点击常见混淆对后，先加载基础数据立即展示，再异步调用大模型对比
+ */
+async function onQuickPair(item) {
+  await loadCompare(item.id1, item.id2)
+  loadAiCompare()
+}
+
+function onImageError(side) {
+  // 图片加载失败时不做处理，依赖 CSS 背景色显示占位效果
+}
+
+defineExpose({ onHerbSelected })
 </script>
 
 <style lang="scss" scoped>
@@ -279,8 +297,8 @@ function onQuickPair(item) {
   }
 
   &__img {
-    width: 240rpx;
-    height: 240rpx;
+    width: 260rpx;
+    height: 260rpx;
     border-radius: $radius-md;
     background-color: $border-color;
   }
@@ -292,58 +310,86 @@ function onQuickPair(item) {
   }
 }
 
-/* 对比表格 */
-.compare-table {
-  &__header {
-    display: flex;
-    background-color: $accent-color;
-    border-radius: $radius-sm $radius-sm 0 0;
-  }
+/* AI 对比 */
+.ai-loading {
+  font-size: $font-md;
+  color: $text-secondary;
+  padding: $spacing-lg 0;
+}
 
-  &__row {
-    display: flex;
-    border-bottom: 1rpx solid $border-color;
-  }
+.ai-summary {
+  font-size: $font-md;
+  font-weight: 500;
+  color: $text-color;
+  line-height: 1.7;
+  display: block;
+  margin-bottom: $spacing-lg;
+}
 
-  &__th, &__td {
-    flex: 1;
-    padding: $spacing-sm $spacing-md;
-    font-size: $font-sm;
-    text-align: center;
-  }
+.ai-comparison {
+  margin-bottom: $spacing-lg;
 
-  &__th {
-    font-weight: 600;
-    color: $primary-color;
-  }
-
-  &__td {
-    color: $text-color;
+  &:last-child {
+    margin-bottom: 0;
   }
 }
 
-/* 文字对比 */
-.compare-text {
+.comparison-field {
+  font-size: $font-md;
+  font-weight: 600;
+  color: $primary-color;
+  display: block;
+  margin-bottom: $space-xs;
+}
+
+.comparison-content {
   display: flex;
-  gap: $spacing-lg;
+  flex-direction: column;
+  gap: $space-xs;
+}
 
-  &__item {
-    flex: 1;
-  }
+.comparison-herb1,
+.comparison-herb2 {
+  font-size: $font-sm;
+  color: $text-color;
+  line-height: 1.7;
+}
 
-  &__name {
-    font-size: $font-md;
-    font-weight: 500;
-    color: $primary-color;
-    display: block;
-    margin-bottom: $spacing-xs;
-  }
+.comparison-diff {
+  font-size: $font-sm;
+  color: $ink-soft;
+  line-height: 1.7;
+}
 
-  &__content {
+.compare-placeholder {
+  font-size: $font-md;
+  color: $text-secondary;
+}
+
+.ai-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-lg 0;
+
+  &__text {
     font-size: $font-sm;
-    color: $text-color;
-    line-height: 1.8;
-    display: block;
+    color: $text-secondary;
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  &__retry {
+    padding: $spacing-sm $spacing-lg;
+    background-color: $primary-color;
+    border-radius: $radius-lg;
+
+    &-text {
+      font-size: $font-md;
+      color: #FFFFFF;
+      font-weight: 500;
+    }
   }
 }
 </style>

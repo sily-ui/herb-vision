@@ -9,5 +9,6 @@ import { upload } from './request'
  * @returns {Promise} 识别结果
  */
 export function identifyImage(imagePath) {
-  return upload('/api/identify', imagePath, 'image')
+  // 后端期望字段名为 file；AI 识别较慢，超时设为 90 秒
+  return upload('/api/identify', imagePath, 'file', {}, { timeout: 90000 })
 }

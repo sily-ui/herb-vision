@@ -10,6 +10,7 @@ from app.services.knowledge_service import (
     search_herbs,
     compare_herbs,
 )
+from app.services.ai_service import ai_compare_herbs
 
 router = APIRouter(prefix="/api/herbs", tags=["知识库"])
 
@@ -70,6 +71,36 @@ async def compare_herbs_api(
     return {
         "herb_1": _herb_to_dict(result["herb_1"]),
         "herb_2": _herb_to_dict(result["herb_2"]),
+    }
+
+
+@router.get("/ai-compare")
+async def ai_compare_herbs_api(
+    q: str = Query(..., description="两个药材ID，逗号分隔，如: 1,2"),
+    db: Session = Depends(get_db),
+):
+    """AI 智能对比两个药材"""
+    try:
+        ids = q.split(",")
+        herb_id_1 = int(ids[0].strip())
+        herb_id_2 = int(ids[1].strip())
+    except (ValueError, IndexError):
+        raise HTTPException(status_code=400, detail="参数格式错误，请使用: q=1,2")
+
+    result = compare_herbs(db, herb_id_1, herb_id_2)
+
+    if result["herb_1"] is None or result["herb_2"] is None:
+        raise HTTPException(status_code=404, detail="药材不存在")
+
+    herb1 = _herb_to_dict(result["herb_1"])
+    herb2 = _herb_to_dict(result["herb_2"])
+
+    ai_result = await ai_compare_herbs(herb1, herb2)
+
+    return {
+        "herb_1": herb1,
+        "herb_2": herb2,
+        "ai_compare": ai_result,
     }
 
 

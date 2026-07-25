@@ -11,6 +11,10 @@
         v-for="(item, index) in searchResults"
         :key="index"
         :herb="item"
+        :navigate="!selectMode"
+        class="result-list__item"
+        :class="{ 'result-list__item--selected': selectMode && selectedId === item.id }"
+        @click="onHerbClick(item)"
       />
     </view>
 
@@ -52,6 +56,17 @@
         </view>
       </view>
     </view>
+
+    <!-- 选择模式底部确认栏 -->
+    <view class="select-bar" v-if="selectMode && selectedHerb.id">
+      <view class="select-bar__info">
+        <text class="select-bar__label">已选择</text>
+        <text class="select-bar__name">{{ selectedHerb.name }}</text>
+      </view>
+      <view class="select-bar__btn" @click="confirmSelect">
+        <text class="select-bar__btn-text">确认选择</text>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -60,7 +75,7 @@
  * 搜索结果页
  * 搜索药材、搜索历史、热门推荐
  */
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { searchHerbs } from '@/api/knowledge'
 import { useHerbStore } from '@/store/herb'
@@ -72,6 +87,10 @@ const herbStore = useHerbStore()
 const searchResults = ref([])
 const searched = ref(false)
 const searchHistory = ref(herbStore.searchHistory)
+const selectMode = ref(false)
+const selectSide = ref(0)
+const selectedHerb = ref({})
+const selectedId = computed(() => selectedHerb.value.id)
 
 const hotKeywords = ref([
   '人参', '黄芪', '当归', '甘草', '白芍',
@@ -79,6 +98,11 @@ const hotKeywords = ref([
 ])
 
 onLoad((query) => {
+  // 支持从对比页进入选择模式：select=compare1 或 select=compare2
+  if (query.select && query.select.startsWith('compare')) {
+    selectMode.value = true
+    selectSide.value = Number(query.select.replace('compare', '')) || 0
+  }
   if (query.keyword) {
     onSearch(query.keyword)
   }
@@ -96,10 +120,30 @@ async function onSearch(keyword) {
 
   try {
     const data = await searchHerbs(keyword)
-    searchResults.value = data.list || data || []
+    searchResults.value = data.items || data.list || data || []
   } catch (err) {
     searchResults.value = []
   }
+}
+
+/**
+ * 点击药材卡片
+ */
+function onHerbClick(item) {
+  if (!selectMode.value) return
+  selectedHerb.value = item
+}
+
+/**
+ * 确认选择并返回对比页
+ */
+function confirmSelect() {
+  const pages = getCurrentPages()
+  const prevPage = pages[pages.length - 2]
+  if (prevPage && prevPage.$vm && prevPage.$vm.onHerbSelected) {
+    prevPage.$vm.onHerbSelected(selectSide.value, selectedHerb.value)
+  }
+  uni.navigateBack()
 }
 
 /**
@@ -128,7 +172,7 @@ function onClearHistory() {
   padding: $spacing-md;
   gap: $spacing-md;
 
-  > * {
+  &__item {
     width: calc(50% - 12rpx);
   }
 }
@@ -184,6 +228,54 @@ function onClearHistory() {
   &--hot {
     color: $primary-color;
     background-color: $accent-color;
+  }
+}
+
+.result-list__item--selected {
+  box-shadow: 0 0 0 4rpx $primary-color;
+}
+
+.select-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md $spacing-lg;
+  padding-bottom: calc(#{$spacing-md} + env(safe-area-inset-bottom));
+  background-color: $card-bg;
+  box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.06);
+  z-index: 100;
+
+  &__info {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  &__label {
+    font-size: $font-sm;
+    color: $text-secondary;
+  }
+
+  &__name {
+    font-size: $font-lg;
+    font-weight: 600;
+    color: $primary-color;
+  }
+
+  &__btn {
+    padding: $spacing-sm $spacing-lg;
+    background-color: $primary-color;
+    border-radius: $radius-lg;
+
+    &-text {
+      font-size: $font-md;
+      color: #FFFFFF;
+      font-weight: 500;
+    }
   }
 }
 </style>

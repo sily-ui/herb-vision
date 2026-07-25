@@ -33,7 +33,9 @@ class UpdateProfileRequest(BaseModel):
 @router.post("/auth/wx-login")
 async def wx_login(request: WxLoginRequest, db: Session = Depends(get_db)):
     """微信小程序登录（code换openid）"""
-    # 调用微信API获取openid
+    if not settings.WX_APPID or settings.WX_APPID in ("your_appid", ""):
+        return _dev_login(db)
+
     params = {
         "appid": settings.WX_APPID,
         "secret": settings.WX_SECRET,
@@ -49,7 +51,6 @@ async def wx_login(request: WxLoginRequest, db: Session = Depends(get_db)):
     if not openid:
         raise HTTPException(status_code=400, detail="微信登录失败，无法获取openid")
 
-    # 查找或创建用户
     user = db.query(User).filter(User.openid == openid).first()
     if user is None:
         user = User(openid=openid, created_at=datetime.now(), updated_at=datetime.now())
@@ -57,9 +58,34 @@ async def wx_login(request: WxLoginRequest, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(user)
 
-    # 生成JWT令牌
     token = create_access_token({"sub": str(user.id)})
+    return {
+        "token": token,
+        "user": {
+            "id": user.id,
+            "nickname": user.nickname,
+            "avatar_url": user.avatar_url,
+        },
+    }
 
+
+@router.post("/auth/dev-login")
+async def dev_login(db: Session = Depends(get_db)):
+    """开发环境快捷登录（无需真实微信 code）"""
+    return _dev_login(db)
+
+
+def _dev_login(db: Session):
+    """开发环境创建/获取 mock 用户并返回 token"""
+    mock_openid = "dev-user-001"
+    user = db.query(User).filter(User.openid == mock_openid).first()
+    if user is None:
+        user = User(openid=mock_openid, nickname="道友", created_at=datetime.now(), updated_at=datetime.now())
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    token = create_access_token({"sub": str(user.id)})
     return {
         "token": token,
         "user": {
@@ -157,10 +183,12 @@ async def get_favorites(
     current_user=Depends(get_current_user),
 ):
     """获取收藏列表"""
-    records = db.query(IdentifyRecord).filter(
+    query = db.query(IdentifyRecord).filter(
         IdentifyRecord.user_id == current_user.id,
         IdentifyRecord.is_favorited == True,
-    ).order_by(IdentifyRecord.created_at.desc()).all()
+    )
+    total = query.count()
+    records = query.order_by(IdentifyRecord.created_at.desc()).all()
 
     items = []
     for record in records:
@@ -172,7 +200,7 @@ async def get_favorites(
             "created_at": record.created_at.isoformat() if record.created_at else None,
         })
 
-    return {"items": items}
+    return {"total": total, "items": items}
 
 
 @router.post("/user/favorites")

@@ -1,36 +1,37 @@
 <template>
   <view class="search-bar">
     <view class="search-bar__inner">
-      <text class="search-bar__icon">&#x1F50D;</text>
+      <text class="search-bar__icon">⌕</text>
       <input
         class="search-bar__input"
         :placeholder="placeholder"
+        :placeholder-class="'search-bar__placeholder'"
         :value="keyword"
         confirm-type="search"
         @input="onInput"
         @confirm="onSearch"
       />
       <view class="search-bar__btn" v-if="keyword" @click="onClear">
-        <text class="search-bar__clear">&#x2715;</text>
+        <text class="search-bar__clear">✕</text>
       </view>
     </view>
     <view class="search-bar__action" @click="onSearch">
-      <text class="search-bar__action-text">搜索</text>
+      <text class="search-bar__action-text">检索</text>
     </view>
   </view>
 </template>
 
 <script setup>
 /**
- * 搜索栏组件
- * 支持输入关键词、搜索按钮、placeholder可配置
+ * 搜索栏 · 墨韵版
+ * 细线输入框 + 朱砂"检索"按钮
  */
 import { ref } from 'vue'
 
 const props = defineProps({
   placeholder: {
     type: String,
-    default: '搜索药材名称、功效...'
+    default: '输入药材名、功效或性状...'
   },
   modelValue: {
     type: String,
@@ -63,41 +64,48 @@ function onClear() {
 .search-bar {
   display: flex;
   align-items: center;
-  gap: $spacing-sm;
+  gap: $space-sm;
 
   &__inner {
     flex: 1;
     display: flex;
     align-items: center;
-    background-color: $bg-color;
-    border-radius: $radius-lg;
-    padding: 0 $spacing-md;
+    background-color: $card;
+    border: 1rpx solid $line;
+    border-radius: $radius-sm;
+    padding: 0 $space-md;
     height: 72rpx;
-    gap: $spacing-sm;
+    gap: $space-sm;
   }
 
   &__icon {
     font-size: $font-lg;
+    color: $ink-light;
   }
 
   &__input {
     flex: 1;
     font-size: $font-md;
-    color: $text-color;
+    color: $ink;
     height: 72rpx;
+    letter-spacing: 1rpx;
+  }
+
+  &__placeholder {
+    color: $ink-faint;
   }
 
   &__clear {
     font-size: $font-sm;
-    color: $text-secondary;
+    color: $ink-light;
   }
 
   &__btn {
-    padding: 8rpx;
+    padding: $space-xxs;
   }
 
   &__action {
-    padding: 0 $spacing-md;
+    padding: 0 $space-md;
     height: 72rpx;
     display: flex;
     align-items: center;
@@ -106,8 +114,9 @@ function onClear() {
 
   &__action-text {
     font-size: $font-md;
-    color: $primary-color;
-    font-weight: 500;
+    color: $cinnabar;
+    font-weight: $weight-medium;
+    letter-spacing: 2rpx;
   }
 }
 </style>

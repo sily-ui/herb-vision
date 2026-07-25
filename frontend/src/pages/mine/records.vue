@@ -34,8 +34,8 @@
     <!-- 空状态 -->
     <view class="empty-state" v-else>
       <text class="empty-state__icon">&#x1F4CB;</text>
-      <text class="empty-state__text">暂无识别记录</text>
-      <text class="empty-state__hint">快去首页拍照识别吧</text>
+      <text class="empty-state__text">{{ userStore.isLogin ? '暂无识别记录' : '请先登录' }}</text>
+      <text class="empty-state__hint">{{ userStore.isLogin ? '快去首页拍照识别吧' : '登录后查看识别记录' }}</text>
     </view>
 
     <!-- 批量删除底部栏 -->
@@ -57,8 +57,10 @@
  */
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
+import { useUserStore } from '@/store/user'
 import { getRecords, deleteRecord, addFavorite, removeFavorite } from '@/api/user'
 
+const userStore = useUserStore()
 const records = ref([])
 const isBatchMode = ref(false)
 const selectedIds = ref([])
@@ -71,7 +73,13 @@ const isAllSelected = computed(() => {
 })
 
 onShow(() => {
-  loadRecords()
+  userStore.checkLogin()
+  if (userStore.isLogin) {
+    page.value = 1
+    loadRecords()
+  } else {
+    records.value = []
+  }
 })
 
 /**
@@ -80,12 +88,13 @@ onShow(() => {
 async function loadRecords() {
   try {
     const data = await getRecords({ page: page.value, pageSize })
+    const list = data.items || data.list || []
     if (page.value === 1) {
-      records.value = data.list || []
+      records.value = list
     } else {
-      records.value.push(...(data.list || []))
+      records.value.push(...list)
     }
-    hasMore.value = (data.list || []).length >= pageSize
+    hasMore.value = list.length >= pageSize
   } catch (err) {
     // 静默处理
   }

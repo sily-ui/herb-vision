@@ -1,64 +1,132 @@
 <template>
   <view class="page-learn">
-    <!-- 收藏夹入口 -->
-    <view class="fav-entry" @click="goFavorites">
-      <view class="fav-entry__icon">&#x2B50;</view>
-      <view class="fav-entry__info">
-        <text class="fav-entry__title">我的收藏</text>
-        <text class="fav-entry__count">{{ favoriteCount }} 个药材</text>
+    <!-- 顶部：习本标题 -->
+    <view class="hero">
+      <view class="hero__meta">
+        <text class="hero__meta-line"></text>
+        <text class="hero__meta-text">STUDY · 学习</text>
       </view>
-      <text class="fav-entry__arrow">&#x276F;</text>
+      <text class="hero__title">日积月累</text>
     </view>
 
-    <!-- 学习统计卡片 -->
-    <view class="stats-card">
-      <view class="stats-item">
-        <text class="stats-item__value">{{ identifyCount }}</text>
-        <text class="stats-item__label">识别次数</text>
+    <!-- 统计：衬线数字三联 -->
+    <view class="stats">
+      <view class="stats__item">
+        <text class="stats__value">{{ identifyCount }}</text>
+        <text class="stats__label">识</text>
       </view>
-      <view class="stats-item">
-        <text class="stats-item__value">{{ favoriteCount }}</text>
-        <text class="stats-item__label">收藏数</text>
+      <view class="stats__divider"></view>
+      <view class="stats__item">
+        <text class="stats__value">{{ favoriteCount }}</text>
+        <text class="stats__label">藏</text>
       </view>
-      <view class="stats-item">
-        <text class="stats-item__value">{{ viewCount }}</text>
-        <text class="stats-item__label">浏览数</text>
+      <view class="stats__divider"></view>
+      <view class="stats__item">
+        <text class="stats__value">{{ viewCount }}</text>
+        <text class="stats__label">览</text>
+      </view>
+    </view>
+
+    <!-- 收藏入口 -->
+    <view class="entry" @click="goFavorites">
+      <view class="entry__seal">
+        <text class="entry__seal-char">藏</text>
+      </view>
+      <view class="entry__body">
+        <text class="entry__title">我的收藏</text>
+        <text class="entry__desc">共 {{ favoriteCount }} 味药材</text>
+      </view>
+      <text class="entry__arrow">→</text>
+    </view>
+
+    <!-- 学习进度可视化 -->
+    <view class="progress-section">
+      <view class="progress-section__head">
+        <text class="progress-section__title">学习足迹</text>
+        <text class="progress-section__streak">已连续 {{ streakDays }} 天</text>
+      </view>
+      <view class="progress-dots">
+        <view
+          class="progress-dot"
+          v-for="(day, index) in weekDays"
+          :key="index"
+          :class="{
+            'progress-dot--active': day.active,
+            'progress-dot--today': day.isToday
+          }"
+        >
+          <text class="progress-dot__label">{{ day.label }}</text>
+          <view class="progress-dot__circle">
+            <text v-if="day.active" class="progress-dot__check">✓</text>
+          </view>
+        </view>
       </view>
     </view>
 
     <!-- 最近浏览 -->
     <view class="section">
-      <view class="section__header">
-        <text class="section__title">最近浏览</text>
-        <text class="section__clear" @click="onClearRecent" v-if="recentViewed.length">清除</text>
+      <view class="section__head">
+        <view class="section__title-wrap">
+          <text class="section__bar"></text>
+          <text class="section__title">近览</text>
+        </view>
+        <text class="section__clear" v-if="recentViewed.length" @click="onClearRecent">清空</text>
       </view>
-      <scroll-view class="recent-scroll" scroll-x enable-flex v-if="recentViewed.length">
+
+      <view class="history-list" v-if="recentViewed.length">
         <view
-          class="recent-item"
+          class="history-item"
           v-for="(item, index) in recentViewed"
-          :key="index"
+          :key="item.id || index"
           @click="goDetail(item)"
         >
-          <image :src="item.image || '/static/images/placeholder.png'" mode="aspectFill" class="recent-item__img" />
-          <text class="recent-item__name">{{ item.name }}</text>
+          <text class="history-item__idx">{{ String(index + 1).padStart(2, '0') }}</text>
+          <view class="history-item__body">
+            <text class="history-item__name">{{ item.name }}</text>
+            <text class="history-item__meta">{{ item.category_part || '草本' }}</text>
+          </view>
+          <view class="history-item__line" v-if="index < recentViewed.length - 1"></view>
         </view>
-      </scroll-view>
+      </view>
       <view class="empty-tip" v-else>
-        <text class="empty-tip__text">暂无浏览记录</text>
+        <text class="empty-tip__text">— 尚无浏览记录 —</text>
       </view>
     </view>
 
-    <!-- 学习推荐 -->
+    <!-- 推荐学习 -->
     <view class="section">
-      <view class="section__header">
-        <text class="section__title">推荐学习</text>
+      <view class="section__head">
+        <view class="section__title-wrap">
+          <text class="section__bar section__bar--gold"></text>
+          <text class="section__title">推荐</text>
+        </view>
+        <text class="section__hint">每日识一味</text>
       </view>
-      <view class="recommend-list">
-        <HerbCard
+
+      <scroll-view class="recommend-scroll" scroll-x enable-flex v-if="recommendList.length">
+        <view
+          class="recommend-card"
           v-for="(item, index) in recommendList"
-          :key="index"
-          :herb="item"
-        />
+          :key="item.id || index"
+          @click="goDetail(item)"
+        >
+          <view class="recommend-card__img-wrap">
+            <image v-if="item.image && !item.image.includes('placeholder')" :src="item.image" mode="aspectFill" class="recommend-card__img" />
+            <view v-else class="recommend-card__img-placeholder">
+              <text class="recommend-card__img-placeholder-text">{{ item.name }}</text>
+            </view>
+            <view class="recommend-card__seal">
+              <text class="recommend-card__seal-text">{{ String(index + 1).padStart(2, '0') }}</text>
+            </view>
+          </view>
+          <view class="recommend-card__body">
+            <text class="recommend-card__name">{{ item.name }}</text>
+            <text class="recommend-card__efficacy">{{ item.efficacy || '草本药材' }}</text>
+          </view>
+        </view>
+      </scroll-view>
+      <view class="empty-tip" v-else>
+        <text class="empty-tip__text">— 正在采撷 —</text>
       </view>
     </view>
   </view>
@@ -66,15 +134,13 @@
 
 <script setup>
 /**
- * 学习首页
- * 收藏夹入口、最近浏览、学习统计、推荐
+ * 习本 · 墨韵版
  */
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useHerbStore } from '@/store/herb'
 import { getFavorites, getRecords } from '@/api/user'
 import { getHerbs } from '@/api/knowledge'
-import HerbCard from '@/components/HerbCard.vue'
 
 const herbStore = useHerbStore()
 
@@ -83,209 +149,551 @@ const identifyCount = ref(0)
 const viewCount = ref(0)
 const recentViewed = ref([])
 const recommendList = ref([])
+const streakDays = ref(0)
+const weekDays = ref([])
 
 onShow(() => {
   recentViewed.value = herbStore.recentViewed
   viewCount.value = herbStore.recentViewed.length
   loadStats()
   loadRecommend()
+  calcStreak()
 })
 
-/**
- * 加载统计数据
- */
 async function loadStats() {
   try {
     const [favData, recData] = await Promise.all([
       getFavorites({ page: 1, pageSize: 1 }),
       getRecords({ page: 1, pageSize: 1 })
     ])
-    favoriteCount.value = favData.total || 0
-    identifyCount.value = recData.total || 0
-  } catch (err) {
-    // 静默处理
-  }
+    favoriteCount.value = favData.total || (favData.items || []).length
+    identifyCount.value = recData.total || (recData.items || []).length
+  } catch (err) {}
 }
 
-/**
- * 加载推荐药材
- */
 async function loadRecommend() {
   try {
-    const data = await getHerbs({ page: 1, pageSize: 4 })
-    recommendList.value = data.list || data || []
-  } catch (err) {
-    // 静默处理
-  }
+    const data = await getHerbs({ page: 1, pageSize: 100 })
+    const all = data.items || data.list || data || []
+    const viewed = herbStore.recentViewed || []
+    const viewedIds = new Set(viewed.map((item) => item.id))
+
+    const favorites = (() => {
+      try {
+        return (JSON.parse(uni.getStorageSync('favorites') || '[]') || []).map((item) => item.id)
+      } catch {
+        return []
+      }
+    })()
+    const favoriteIds = new Set(favorites)
+
+    const viewedHerbs = all.filter((item) => viewedIds.has(item.id))
+    const parts = new Set(viewedHerbs.map((item) => item.category_part || item.part_used).filter(Boolean))
+    const effects = new Set(viewedHerbs.map((item) => item.category_efficacy).filter(Boolean))
+    const viewedParts = new Set(viewedHerbs.map((item) => item.category_part || item.part_used).filter(Boolean))
+    const viewedEffects = new Set(viewedHerbs.map((item) => item.category_efficacy).filter(Boolean))
+
+    const scored = all
+      .filter((item) => !viewedIds.has(item.id))
+      .map((item) => {
+        let score = 0
+        if (parts.has(item.category_part || item.part_used)) score += 2
+        if (effects.has(item.category_efficacy)) score += 2
+        if (viewedParts.has(item.category_part || item.part_used)) score += 1
+        if (viewedEffects.has(item.category_efficacy)) score += 1
+        if (favoriteIds.has(item.id)) score += 1
+        return { item, score }
+      })
+      .sort((a, b) => b.score - a.score)
+
+    const picks = scored.filter((x) => x.score > 0).slice(0, 4)
+    const pool = picks.map((x) => x.item)
+
+    if (pool.length < 4) {
+      const seen = new Set(pool.map((item) => item.id))
+      for (const h of all) {
+        if (!seen.has(h.id) && !viewedIds.has(h.id)) {
+          pool.push(h)
+          seen.add(h.id)
+          if (pool.length >= 4) break
+        }
+      }
+    }
+
+    recommendList.value = pool.slice(0, 4).map((item) => ({
+      ...item,
+      image: item.image_main || item.image || '/static/images/placeholder.png',
+      category_part: item.category_part || item.part_used || '草本',
+      efficacy: item.efficacy || item.nature_taste || '草本药材'
+    }))
+  } catch (err) {}
 }
 
-/**
- * 跳转收藏夹
- */
 function goFavorites() {
-  uni.navigateTo({
-    url: '/pages/learn/favorites'
-  })
+  uni.navigateTo({ url: '/pages/learn/favorites' })
 }
 
-/**
- * 清除最近浏览
- */
 function onClearRecent() {
   herbStore.clearRecentViewed()
   recentViewed.value = []
   viewCount.value = 0
 }
 
-/**
- * 跳转详情
- */
 function goDetail(item) {
-  uni.navigateTo({
-    url: `/pages/knowledge/detail?id=${item.id}`
-  })
+  uni.navigateTo({ url: `/pages/knowledge/detail?id=${item.id}` })
+}
+
+function calcStreak() {
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  const days = ['日', '一', '二', '三', '四', '五', '六']
+  const week = []
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today - i * 86400000)
+    const isToday = i === 0
+    const dateStr = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
+    const hasActivity = herbStore.recentViewed.some(
+      (item) => item.viewedAt && new Date(item.viewedAt).toDateString() === d.toDateString()
+    )
+    week.push({
+      label: days[d.getDay()],
+      active: hasActivity,
+      isToday
+    })
+  }
+  weekDays.value = week
+
+  let streak = 0
+  for (let i = 0; i < week.length; i++) {
+    if (week[i].active) streak++
+    else break
+  }
+  streakDays.value = streak
 }
 </script>
 
 <style lang="scss" scoped>
 .page-learn {
   min-height: 100vh;
-  background-color: $bg-color;
-  padding: $spacing-lg;
+  background-color: $paper;
+  padding: 0 $space-lg $space-3xl;
 }
 
-/* 收藏夹入口 */
-.fav-entry {
-  display: flex;
-  align-items: center;
-  padding: $spacing-lg;
-  background: linear-gradient(135deg, $primary-color, $secondary-color);
-  border-radius: $radius-lg;
-  margin-bottom: $spacing-lg;
-  gap: $spacing-md;
+/* ===== Hero ===== */
+.hero {
+  padding: $space-2xl 0 $space-lg;
 
-  &__icon {
-    font-size: 48rpx;
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    margin-bottom: $space-md;
   }
 
-  &__info {
-    flex: 1;
+  &__meta-line {
+    width: 32rpx;
+    height: 1rpx;
+    background-color: $ink-light;
+  }
+
+  &__meta-text {
+    font-size: $font-xs;
+    color: $ink-light;
+    letter-spacing: 3rpx;
+    font-weight: $weight-medium;
   }
 
   &__title {
-    font-size: $font-lg;
-    font-weight: 600;
-    color: #FFFFFF;
+    font-size: 72rpx;
+    font-weight: $weight-bold;
+    color: $ink;
+    letter-spacing: 8rpx;
     display: block;
   }
+}
 
-  &__count {
+/* ===== 统计三联 ===== */
+.stats {
+  display: flex;
+  align-items: center;
+  background-color: $card;
+  border: 1rpx solid $line;
+  border-radius: $radius-md;
+  padding: $space-lg 0;
+  margin-bottom: $space-lg;
+
+  &__item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space-xs;
+  }
+
+  &__value {
+    font-family: $font-serif;
+    font-size: 64rpx;
+    font-weight: $weight-bold;
+    color: $ink;
+    line-height: 1;
+    letter-spacing: 2rpx;
+  }
+
+  &__label {
+    font-family: $font-serif;
     font-size: $font-sm;
-    color: $accent-color;
-    display: block;
-    margin-top: $spacing-xs;
+    color: $ink-light;
+    letter-spacing: 2rpx;
+  }
+
+  &__divider {
+    width: 1rpx;
+    height: 64rpx;
+    background-color: $line;
+  }
+}
+
+/* ===== 收藏入口 ===== */
+.entry {
+  display: flex;
+  align-items: center;
+  background-color: $ink;
+  padding: $space-lg;
+  border-radius: $radius-md;
+  gap: $space-md;
+  margin-bottom: $space-2xl;
+
+  &:active {
+    opacity: 0.9;
+  }
+
+  &__seal {
+    width: 80rpx;
+    height: 80rpx;
+    background-color: $cinnabar;
+    border-radius: $radius-sm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__seal-char {
+    font-family: $font-serif;
+    font-size: 44rpx;
+    color: #FFFFFF;
+    font-weight: $weight-bold;
+    line-height: 1;
+  }
+
+  &__body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: $space-xxs;
+  }
+
+  &__title {
+    font-size: $font-md;
+    font-weight: $weight-semibold;
+    color: #FFFFFF;
+    letter-spacing: 2rpx;
+  }
+
+  &__desc {
+    font-size: $font-xs;
+    color: rgba(255, 255, 255, 0.5);
+    letter-spacing: 1rpx;
   }
 
   &__arrow {
     font-size: $font-lg;
-    color: $accent-color;
+    color: rgba(255, 255, 255, 0.6);
   }
 }
 
-/* 统计卡片 */
-.stats-card {
-  display: flex;
-  background-color: $card-bg;
-  border-radius: $radius-lg;
-  padding: $spacing-lg;
-  margin-bottom: $spacing-lg;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
-}
-
-.stats-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: $spacing-xs;
-
-  &__value {
-    font-size: 48rpx;
-    font-weight: 700;
-    color: $primary-color;
-  }
-
-  &__label {
-    font-size: $font-sm;
-    color: $text-secondary;
-  }
-}
-
-/* 通用板块 */
+/* ===== Section ===== */
 .section {
-  margin-bottom: $spacing-lg;
+  margin-top: $space-xl;
 
-  &__header {
+  &__head {
     display: flex;
     justify-content: space-between;
-    margin-bottom: $spacing-md;
+    align-items: center;
+    margin-bottom: $space-md;
+  }
+
+  &__title-wrap {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+  }
+
+  &__bar {
+    width: 4rpx;
+    height: 28rpx;
+    background-color: $cinnabar;
+
+    &--gold {
+      background-color: $gold;
+    }
   }
 
   &__title {
     font-size: $font-lg;
-    font-weight: 600;
-    color: $text-color;
+    font-weight: $weight-semibold;
+    color: $ink;
+    letter-spacing: 2rpx;
   }
 
   &__clear {
     font-size: $font-sm;
-    color: $text-secondary;
+    color: $ink-light;
+    letter-spacing: 1rpx;
+  }
+
+  &__hint {
+    font-size: $font-xs;
+    color: $ink-light;
+    letter-spacing: 2rpx;
   }
 }
 
-.recent-scroll {
-  white-space: nowrap;
+/* ===== 学习进度可视化 ===== */
+.progress-section {
+  margin-top: $space-xl;
+  padding: $space-lg;
+  background-color: $card;
+  border: 1rpx solid $line;
+  border-radius: $radius-md;
+
+  &__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: $space-lg;
+  }
+
+  &__title {
+    font-size: $font-md;
+    font-weight: $weight-semibold;
+    color: $ink;
+    letter-spacing: 2rpx;
+  }
+
+  &__streak {
+    font-size: $font-xs;
+    color: $cinnabar;
+    letter-spacing: 1rpx;
+    font-weight: $weight-medium;
+  }
 }
 
-.recent-item {
-  display: inline-flex;
+.progress-dots {
+  display: flex;
+  justify-content: space-between;
+  gap: $space-xs;
+}
+
+.progress-dot {
+  display: flex;
   flex-direction: column;
   align-items: center;
-  width: 160rpx;
-  margin-right: $spacing-md;
-  flex-shrink: 0;
+  gap: $space-xs;
+  flex: 1;
 
-  &__img {
-    width: 160rpx;
-    height: 160rpx;
-    border-radius: $radius-md;
-    background-color: $border-color;
+  &__label {
+    font-size: $font-xs;
+    color: $ink-light;
+    letter-spacing: 1rpx;
+  }
+
+  &__circle {
+    width: 56rpx;
+    height: 56rpx;
+    border-radius: 50%;
+    border: 2rpx solid $line;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: $paper;
+    transition: all 0.3s;
+
+    .progress-dot--active & {
+      background-color: $cinnabar;
+      border-color: $cinnabar;
+    }
+
+    .progress-dot--today & {
+      border-color: $cinnabar;
+      box-shadow: 0 0 0 4rpx rgba(168, 54, 47, 0.15);
+    }
+  }
+
+  &__check {
+    font-size: 28rpx;
+    color: #FFFFFF;
+    font-weight: $weight-bold;
+  }
+}
+
+/* ===== 最近浏览（纯文本列表） ===== */
+.history-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  padding: $space-md $space-lg;
+  background-color: $card;
+  border: 1rpx solid $line;
+  border-radius: $radius-md;
+  gap: $space-md;
+  position: relative;
+
+  &:active {
+    background-color: $paper-warm;
+  }
+
+  &__idx {
+    font-family: $font-serif;
+    font-size: $font-sm;
+    color: $gold;
+    letter-spacing: 2rpx;
+    font-weight: $weight-medium;
+    flex-shrink: 0;
+    width: 48rpx;
+    text-align: center;
+  }
+
+  &__body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: $space-xxs;
+    min-width: 0;
   }
 
   &__name {
-    font-size: $font-sm;
-    color: $text-color;
-    margin-top: $spacing-xs;
+    font-size: $font-md;
+    font-weight: $weight-semibold;
+    color: $ink;
+    letter-spacing: 1rpx;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__meta {
+    font-size: $font-xs;
+    color: $ink-light;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__line {
+    position: absolute;
+    bottom: 0;
+    left: $space-lg;
+    right: $space-lg;
+    height: 1rpx;
+    background-color: $line;
+  }
+}
+
+/* ===== 推荐学习（横向滚动卡片） ===== */
+.recommend-scroll {
+  white-space: nowrap;
+  margin: 0 calc(-1 * #{$space-lg});
+  padding: 0 $space-lg;
+}
+
+.recommend-card {
+  display: inline-flex;
+  flex-direction: column;
+  width: 260rpx;
+  margin-right: $space-md;
+  flex-shrink: 0;
+  background-color: $card;
+  border: 1rpx solid $line;
+  border-radius: $radius-md;
+  overflow: hidden;
+  transition: all 0.2s;
+
+  &:active {
+    background-color: $paper-warm;
+    transform: scale(0.98);
+  }
+
+  &__img-wrap {
+    position: relative;
+    width: 100%;
+    height: 260rpx;
+    overflow: hidden;
+    background-color: $paper-deep;
+  }
+
+  &__img {
+    width: 100%;
+    height: 100%;
+  }
+
+  &__seal {
+    position: absolute;
+    top: $space-sm;
+    left: $space-sm;
+    padding: 2rpx 8rpx;
+    background-color: rgba(250, 248, 243, 0.9);
+    border: 1rpx solid $line;
+    border-radius: $radius-xs;
+  }
+
+  &__seal-text {
+    font-family: $font-serif;
+    font-size: $font-xs;
+    color: $cinnabar;
+    letter-spacing: 1rpx;
+    font-weight: $weight-medium;
+  }
+
+  &__body {
+    padding: $space-md;
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+  }
+
+  &__name {
+    font-size: $font-md;
+    font-weight: $weight-semibold;
+    color: $ink;
+    letter-spacing: 1rpx;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__efficacy {
+    font-size: $font-xs;
+    color: $ink-light;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
 .empty-tip {
-  padding: $spacing-xl 0;
+  padding: $space-2xl 0;
   text-align: center;
 
   &__text {
+    font-family: $font-serif;
     font-size: $font-sm;
-    color: $text-secondary;
-  }
-}
-
-.recommend-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: $spacing-md;
-
-  > * {
-    width: calc(50% - 12rpx);
+    color: $ink-faint;
+    letter-spacing: 4rpx;
   }
 }
 </style>

@@ -4,11 +4,18 @@
 import { get, post } from './request'
 
 /**
- * 获取药材列表
- * @param {object} params - 查询参数 { page, pageSize, category, part }
+ * 获取药材列表（分页+筛选）
+ * @param {object} params - 查询参数 { page, pageSize, categoryPart, categoryEfficacy, keyword }
  */
 export function getHerbs(params = {}) {
-  return get('/api/herbs', params)
+  const { page, pageSize, categoryPart, categoryEfficacy, keyword } = params
+  const query = {}
+  if (page) query.page = page
+  if (pageSize) query.page_size = pageSize
+  if (categoryPart) query.category_part = categoryPart
+  if (categoryEfficacy) query.category_efficacy = categoryEfficacy
+  if (keyword) query.keyword = keyword
+  return get('/api/herbs', query)
 }
 
 /**
@@ -33,7 +40,16 @@ export function searchHerbs(keyword) {
  * @param {string|number} id2 - 药材2 ID
  */
 export function compareHerbs(id1, id2) {
-  return get('/api/herbs/compare', { id1, id2 })
+  return get('/api/herbs/compare', { q: `${id1},${id2}` }, { timeout: 60000 })
+}
+
+/**
+ * AI 智能对比两个药材
+ * @param {string|number} id1 - 药材1 ID
+ * @param {string|number} id2 - 药材2 ID
+ */
+export function aiCompareHerbs(id1, id2) {
+  return get('/api/herbs/ai-compare', { q: `${id1},${id2}` }, { timeout: 60000 })
 }
 
 /**

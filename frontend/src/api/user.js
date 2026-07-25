@@ -8,7 +8,7 @@ import { get, post } from './request'
  * @param {string} code - 微信登录code
  */
 export function wxLogin(code) {
-  return post('/api/user/login', { code })
+  return post('/api/auth/wx-login', { code })
 }
 
 /**
@@ -31,7 +31,11 @@ export function updateUserProfile(data) {
  * @param {object} params - 查询参数 { page, pageSize }
  */
 export function getRecords(params = {}) {
-  return get('/api/user/records', params)
+  const { page, pageSize } = params
+  return get('/api/user/records', {
+    page: page || 1,
+    page_size: pageSize || 20
+  })
 }
 
 /**
@@ -47,15 +51,19 @@ export function deleteRecord(id) {
  * @param {object} params - 查询参数 { page, pageSize }
  */
 export function getFavorites(params = {}) {
-  return get('/api/user/favorites', params)
+  const { page, pageSize } = params
+  return get('/api/user/favorites', {
+    page: page || 1,
+    page_size: pageSize || 20
+  })
 }
 
 /**
- * 添加收藏
+ * 添加收藏（后端期望 query 参数 record_id）
  * @param {string|number} recordId - 记录/药材ID
  */
 export function addFavorite(recordId) {
-  return post('/api/user/favorites', { recordId })
+  return post('/api/user/favorites', null, { params: { record_id: recordId } })
 }
 
 /**

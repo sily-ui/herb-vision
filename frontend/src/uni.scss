@@ -1,31 +1,103 @@
-/* 主题色 - 中药青绿色系 */
-$primary-color: #2B7A78;
-$secondary-color: #3AAFA9;
-$accent-color: #DEF2F1;
-$text-color: #17252A;
-$text-secondary: #8796A5;
-$bg-color: #F7F8FA;
-$card-bg: #FFFFFF;
-$border-color: #E8ECF0;
-$danger-color: #F56C6C;
-$warning-color: #E6A23C;
-$success-color: #67C23A;
+/* ============================================================
+ * 设计系统 · 墨韵 Modern Oriental Ink
+ * 理念：宣纸米白 + 墨黑文字 + 朱砂点缀 + 竹青次强调
+ * 通过字重对比与留白建立层次，而非依赖饱和色
+ * ============================================================ */
 
-/* 字号变量 */
+/* ---------- 墨色阶（文字） ---------- */
+$ink: #1A1A1A;              // 主文字 - 浓墨
+$ink-soft: #4A4A4A;         // 次文字 - 淡墨
+$ink-light: #8C8C8C;        // 辅助文字 - 灰墨
+$ink-faint: #BFBFBF;        // 占位 - 淡灰墨
+
+/* ---------- 纸色阶（背景） ---------- */
+$paper: #FAF8F3;             // 主背景 - 宣纸米白
+$paper-warm: #F2EDE2;        // 暖宣纸 - 次背景
+$paper-deep: #ECE6D7;        // 深宣纸 - 分组背景
+$card: #FFFFFF;              // 卡片白
+
+/* ---------- 强调色（克制使用） ---------- */
+$cinnabar: #A8362F;          // 朱砂红 - 关键 CTA、印章、徽章
+$cinnabar-deep: #7A2820;     // 深朱砂 - 按压态
+$cinnabar-soft: rgba(168, 54, 47, 0.08); // 朱砂底色
+
+$bamboo: #3D5A4A;            // 竹青墨绿 - 次强调、链接
+$bamboo-deep: #2A4135;       // 深竹青
+$bamboo-soft: rgba(61, 90, 74, 0.08);    // 竹青底色
+
+$gold: #A88A5C;              // 古铜金 - 装饰线、特殊徽标
+$gold-soft: rgba(168, 138, 92, 0.1);
+
+/* ---------- 边线 ---------- */
+$line: #E5DFD2;              // 主分割线 - 暖灰
+$line-soft: #F0EBDF;         // 软分割线
+$line-strong: #C9C0AA;       // 强分割线 - 深暖灰
+
+/* ---------- 语义色（低饱和） ---------- */
+$danger: #A8362F;            // 危险/禁忌（与朱砂统一）
+$warning: #B8804A;           // 警告
+$success: #3D5A4A;           // 成功（与竹青统一）
+
+/* 兼容旧变量名（避免大量改动） */
+$primary-color: $bamboo;
+$secondary-color: $bamboo-deep;
+$accent-color: $bamboo-soft;
+$text-color: $ink;
+$text-secondary: $ink-light;
+$bg-color: $paper;
+$card-bg: $card;
+$border-color: $line;
+$danger-color: $danger;
+$warning-color: $warning;
+$success-color: $success;
+
+/* ---------- 字号 ---------- */
 $font-xs: 20rpx;
-$font-sm: 24rpx;
-$font-md: 28rpx;
-$font-lg: 32rpx;
+$font-sm: 22rpx;
+$font-md: 26rpx;
+$font-lg: 30rpx;
 $font-xl: 36rpx;
+$font-2xl: 44rpx;
+$font-3xl: 56rpx;
 
-/* 间距变量 */
-$spacing-xs: 8rpx;
-$spacing-sm: 16rpx;
-$spacing-md: 24rpx;
-$spacing-lg: 32rpx;
-$spacing-xl: 48rpx;
+/* ---------- 字重 ---------- */
+$weight-light: 300;
+$weight-regular: 400;
+$weight-medium: 500;
+$weight-semibold: 600;
+$weight-bold: 700;
 
-/* 圆角变量 */
-$radius-sm: 8rpx;
-$radius-md: 16rpx;
-$radius-lg: 24rpx;
+/* ---------- 间距（8 的倍数体系） ---------- */
+$space-xxs: 4rpx;
+$space-xs: 8rpx;
+$space-sm: 16rpx;
+$space-md: 24rpx;
+$space-lg: 32rpx;
+$space-xl: 48rpx;
+$space-2xl: 64rpx;
+$space-3xl: 96rpx;
+
+/* 兼容旧变量名 */
+$spacing-xs: $space-xs;
+$spacing-sm: $space-sm;
+$spacing-md: $space-md;
+$spacing-lg: $space-lg;
+$spacing-xl: $space-xl;
+
+/* ---------- 圆角（小圆角更精致） ---------- */
+$radius-xs: 2rpx;
+$radius-sm: 4rpx;
+$radius-md: 8rpx;
+$radius-lg: 12rpx;
+$radius-xl: 16rpx;
+$radius-pill: 999rpx;
+
+/* ---------- 字体栈 ---------- */
+$font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Source Han Sans CN", "Noto Sans CJK SC", sans-serif;
+$font-serif: "Songti SC", "STSong", "Source Han Serif CN", "Noto Serif CJK SC", "SimSun", serif;
+
+/* ---------- 阴影（极淡、有暖意） ---------- */
+$shadow-sm: 0 1rpx 2rpx rgba(60, 50, 30, 0.04);
+$shadow-md: 0 2rpx 8rpx rgba(60, 50, 30, 0.05);
+$shadow-lg: 0 8rpx 32rpx rgba(60, 50, 30, 0.08);
+$shadow-ink: 0 4rpx 16rpx rgba(26, 26, 26, 0.06);

@@ -1,88 +1,128 @@
 <template>
   <view class="page-mine">
-    <!-- 用户信息区 -->
-    <view class="user-section" v-if="userStore.isLogin">
-      <image :src="userStore.avatar || '/static/images/placeholder.png'" mode="aspectFill" class="user-section__avatar" />
-      <view class="user-section__info">
-        <text class="user-section__name">{{ userStore.nickname }}</text>
-        <text class="user-section__id">ID: {{ userStore.userInfo.id || '-' }}</text>
+    <!-- 用户区 -->
+    <view class="user-block" v-if="userStore.isLogin">
+      <view class="user-block__avatar-wrap">
+        <image :src="userStore.avatar || '/static/images/placeholder.png'" mode="aspectFill" class="user-block__avatar" />
       </view>
-      <view class="user-section__edit" @click="goProfile">
-        <text>编辑</text>
+      <view class="user-block__info">
+        <text class="user-block__name">{{ userStore.nickname }}</text>
+        <text class="user-block__id">No.{{ String(userStore.userInfo.id || 0).padStart(4, '0') }}</text>
+      </view>
+      <view class="user-block__edit" @click="goProfile">
+        <text class="user-block__edit-text">编辑</text>
       </view>
     </view>
-    <view class="user-section user-section--nologin" v-else>
-      <view class="user-section__avatar-placeholder">&#x1F464;</view>
-      <view class="user-section__info">
-        <text class="user-section__name">未登录</text>
+    <view class="user-block user-block--nologin" v-else>
+      <view class="user-block__avatar-wrap user-block__avatar-wrap--placeholder">
+        <text class="user-block__avatar-char">客</text>
       </view>
-      <view class="login-btn" @click="onLogin">
-        <text class="login-btn__text">微信一键登录</text>
+      <view class="user-block__info">
+        <text class="user-block__name">未登录</text>
+        <text class="user-block__id">登录后可同步数据</text>
+      </view>
+      <view class="user-block__login" @click="onLogin">
+        <text class="user-block__login-text">微信登录</text>
+      </view>
+    </view>
+
+    <!-- 学习足迹 -->
+    <view class="stats-card">
+      <view class="stats-card__item" @click="goRecords">
+        <text class="stats-card__num">{{ stats.records }}</text>
+        <text class="stats-card__label">识别记录</text>
+      </view>
+      <view class="stats-card__divider"></view>
+      <view class="stats-card__item" @click="goFavorites">
+        <text class="stats-card__num">{{ stats.favorites }}</text>
+        <text class="stats-card__label">我的收藏</text>
       </view>
     </view>
 
     <!-- 功能列表 -->
-    <view class="menu-list">
-      <view class="menu-item" @click="goRecords">
-        <text class="menu-item__icon">&#x1F4CB;</text>
-        <text class="menu-item__name">识别记录</text>
-        <text class="menu-item__arrow">&#x276F;</text>
+    <view class="menu">
+      <view class="menu__head">
+        <text class="menu__head-text">我的</text>
       </view>
-      <view class="menu-item" @click="goFavorites">
-        <text class="menu-item__icon">&#x2B50;</text>
-        <text class="menu-item__name">我的收藏</text>
-        <text class="menu-item__arrow">&#x276F;</text>
+      <view class="menu__item" @click="goRecords">
+        <text class="menu__num">01</text>
+        <text class="menu__name">识别记录</text>
+        <text class="menu__arrow">→</text>
       </view>
-      <view class="menu-item" @click="goCacheManage">
-        <text class="menu-item__icon">&#x1F4BE;</text>
-        <text class="menu-item__name">离线缓存管理</text>
-        <text class="menu-item__extra">{{ cacheCount }} 条</text>
-        <text class="menu-item__arrow">&#x276F;</text>
+      <view class="menu__item" @click="goFavorites">
+        <text class="menu__num">02</text>
+        <text class="menu__name">我的收藏</text>
+        <text class="menu__arrow">→</text>
       </view>
-      <view class="menu-item" @click="onClearCache">
-        <text class="menu-item__icon">&#x1F5D1;</text>
-        <text class="menu-item__name">清除缓存</text>
-        <text class="menu-item__arrow">&#x276F;</text>
+      <view class="menu__item" @click="goFeedback">
+        <text class="menu__num">03</text>
+        <text class="menu__name">意见反馈</text>
+        <text class="menu__arrow">→</text>
       </view>
-      <view class="menu-item" @click="goFeedback">
-        <text class="menu-item__icon">&#x1F4DD;</text>
-        <text class="menu-item__name">意见反馈</text>
-        <text class="menu-item__arrow">&#x276F;</text>
+      <view class="menu__item" @click="goAbout">
+        <text class="menu__num">04</text>
+        <text class="menu__name">关于本草</text>
+        <text class="menu__arrow">→</text>
       </view>
-      <view class="menu-item" @click="goAbout">
-        <text class="menu-item__icon">&#x2139;</text>
-        <text class="menu-item__name">关于</text>
-        <text class="menu-item__arrow">&#x276F;</text>
+      <view class="menu__item" @click="onClearCache">
+        <text class="menu__num">05</text>
+        <text class="menu__name">清除缓存</text>
+        <text class="menu__arrow">→</text>
       </view>
     </view>
 
-    <!-- 退出登录 -->
-    <view class="logout-btn" v-if="userStore.isLogin" @click="onLogout">
-      <text class="logout-btn__text">退出登录</text>
+    <!-- 退出 -->
+    <view class="logout" v-if="userStore.isLogin" @click="onLogout">
+      <text class="logout__text">退出登录</text>
+    </view>
+
+    <!-- 尾签 -->
+    <view class="sign">
+      <view class="sign__line"></view>
+      <text class="sign__text">本草 · v1.0.0</text>
     </view>
   </view>
 </template>
 
 <script setup>
 /**
- * 个人中心
- * 用户信息、功能列表、退出登录
+ * 我 · 墨韵版
  */
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/store/user'
-import { getCacheSize, clearAllCache } from '@/utils/cache'
+import { getRecords, getFavorites } from '@/api/user'
 
 const userStore = useUserStore()
-const cacheCount = ref(0)
+
+const stats = ref({
+  records: 0,
+  favorites: 0,
+})
 
 onShow(() => {
-  cacheCount.value = getCacheSize()
+  userStore.checkLogin()
+  if (userStore.isLogin) {
+    loadStats()
+  }
 })
 
 /**
- * 微信登录
+ * 加载学习足迹统计
  */
+async function loadStats() {
+  try {
+    const [recordsData, favoritesData] = await Promise.all([
+      getRecords({ page: 1, pageSize: 1 }),
+      getFavorites({ page: 1, pageSize: 1 })
+    ])
+    stats.value.records = recordsData.total || 0
+    stats.value.favorites = favoritesData.total || 0
+  } catch (err) {
+    // 静默处理
+  }
+}
+
 async function onLogin() {
   try {
     await userStore.login()
@@ -92,9 +132,6 @@ async function onLogin() {
   }
 }
 
-/**
- * 退出登录
- */
 function onLogout() {
   uni.showModal({
     title: '提示',
@@ -108,179 +145,251 @@ function onLogout() {
   })
 }
 
-/**
- * 清除缓存
- */
 function onClearCache() {
   uni.showModal({
     title: '提示',
     content: '确定清除所有缓存数据？',
     success: (res) => {
       if (res.confirm) {
-        clearAllCache()
-        cacheCount.value = 0
         uni.showToast({ title: '缓存已清除', icon: 'none' })
       }
     }
   })
 }
 
-function goProfile() {
-  uni.navigateTo({ url: '/pages/mine/profile' })
-}
-
-function goRecords() {
-  uni.navigateTo({ url: '/pages/mine/records' })
-}
-
-function goFavorites() {
-  uni.navigateTo({ url: '/pages/learn/favorites' })
-}
-
-function goCacheManage() {
-  uni.showToast({ title: '缓存管理', icon: 'none' })
-}
-
-function goFeedback() {
-  uni.navigateTo({ url: '/pages/feedback/index' })
-}
-
-function goAbout() {
-  uni.showToast({ title: 'AI中药识别 v1.0.0', icon: 'none' })
-}
+function goProfile() { uni.navigateTo({ url: '/pages/mine/profile' }) }
+function goRecords() { uni.navigateTo({ url: '/pages/mine/records' }) }
+function goFavorites() { uni.navigateTo({ url: '/pages/learn/favorites' }) }
+function goFeedback() { uni.navigateTo({ url: '/pages/feedback/index' }) }
+function goAbout() { uni.showToast({ title: '本草 v1.0.0', icon: 'none' }) }
 </script>
 
 <style lang="scss" scoped>
 .page-mine {
   min-height: 100vh;
-  background-color: $bg-color;
+  background-color: $paper;
+  padding: 0 $space-lg $space-3xl;
 }
 
-/* 用户信息区 */
-.user-section {
+/* ===== 用户区 ===== */
+.user-block {
   display: flex;
   align-items: center;
-  padding: $spacing-xl $spacing-lg;
-  background: linear-gradient(135deg, $primary-color, $secondary-color);
-  gap: $spacing-md;
+  padding: $space-2xl 0 $space-xl;
+  gap: $space-md;
 
-  &--nologin {
-    padding: $spacing-xl $spacing-lg;
+  &__avatar-wrap {
+    width: 120rpx;
+    height: 120rpx;
+    border-radius: 50%;
+    overflow: hidden;
+    background-color: $paper-deep;
+    border: 1rpx solid $line;
+    flex-shrink: 0;
+
+    &--placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: $ink;
+    }
   }
 
   &__avatar {
-    width: 120rpx;
-    height: 120rpx;
-    border-radius: 50%;
-    background-color: $accent-color;
-    flex-shrink: 0;
+    width: 100%;
+    height: 100%;
   }
 
-  &__avatar-placeholder {
-    width: 120rpx;
-    height: 120rpx;
-    border-radius: 50%;
-    background-color: $accent-color;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 64rpx;
-    flex-shrink: 0;
+  &__avatar-char {
+    font-family: $font-serif;
+    font-size: 56rpx;
+    color: #FFFFFF;
+    font-weight: $weight-medium;
   }
 
   &__info {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: $space-xxs;
   }
 
   &__name {
     font-size: $font-xl;
-    font-weight: 600;
-    color: #FFFFFF;
-    display: block;
+    font-weight: $weight-semibold;
+    color: $ink;
+    letter-spacing: 2rpx;
   }
 
   &__id {
-    font-size: $font-sm;
-    color: $accent-color;
-    display: block;
-    margin-top: $spacing-xs;
+    font-family: $font-serif;
+    font-size: $font-xs;
+    color: $ink-light;
+    letter-spacing: 2rpx;
   }
 
   &__edit {
-    padding: $spacing-sm $spacing-md;
-    background-color: rgba(255, 255, 255, 0.2);
-    border-radius: $radius-lg;
-    color: #FFFFFF;
+    padding: $space-xs $space-md;
+    border: 1rpx solid $line-strong;
+    border-radius: $radius-sm;
+  }
+
+  &__edit-text {
     font-size: $font-sm;
+    color: $ink-soft;
+    letter-spacing: 1rpx;
+  }
+
+  &__login {
+    padding: $space-xs $space-md;
+    background-color: $ink;
+    border-radius: $radius-sm;
+  }
+
+  &__login-text {
+    font-size: $font-sm;
+    color: #FFFFFF;
+    letter-spacing: 2rpx;
+    font-weight: $weight-medium;
   }
 }
 
-.login-btn {
-  padding: $spacing-sm $spacing-lg;
-  background-color: #FFFFFF;
-  border-radius: $radius-lg;
-
-  &__text {
-    font-size: $font-md;
-    color: $primary-color;
-    font-weight: 600;
-  }
-}
-
-/* 功能列表 */
-.menu-list {
-  margin: $spacing-lg $spacing-lg 0;
-  background-color: $card-bg;
-  border-radius: $radius-lg;
+/* ===== 菜单 ===== */
+.menu {
+  background-color: $card;
+  border: 1rpx solid $line;
+  border-radius: $radius-md;
   overflow: hidden;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
-}
 
-.menu-item {
-  display: flex;
-  align-items: center;
-  padding: $spacing-lg;
-  border-bottom: 1rpx solid $border-color;
-  gap: $spacing-md;
-
-  &:last-child {
-    border-bottom: none;
+  &__head {
+    padding: $space-md $space-lg;
+    border-bottom: 1rpx solid $line-soft;
+    background-color: $paper-warm;
   }
 
-  &__icon {
-    font-size: 40rpx;
+  &__head-text {
+    font-family: $font-serif;
+    font-size: $font-sm;
+    color: $ink-light;
+    letter-spacing: 4rpx;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    padding: $space-md $space-lg;
+    gap: $space-md;
+    border-bottom: 1rpx solid $line-soft;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:active {
+      background-color: $paper-warm;
+    }
+  }
+
+  &__num {
+    font-family: $font-serif;
+    font-size: $font-sm;
+    color: $gold;
+    width: 40rpx;
+    font-weight: $weight-medium;
+    letter-spacing: 1rpx;
   }
 
   &__name {
     flex: 1;
     font-size: $font-md;
-    color: $text-color;
+    color: $ink;
+    letter-spacing: 1rpx;
   }
 
   &__extra {
     font-size: $font-sm;
-    color: $text-secondary;
+    color: $ink-light;
   }
 
   &__arrow {
     font-size: $font-sm;
-    color: $text-secondary;
+    color: $ink-faint;
   }
 }
 
-/* 退出登录 */
-.logout-btn {
-  margin: $spacing-xl $spacing-lg;
-  padding: $spacing-lg 0;
-  background-color: $card-bg;
-  border-radius: $radius-lg;
+/* ===== 退出 ===== */
+.logout {
+  margin-top: $space-xl;
+  padding: $space-md 0;
   text-align: center;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
+  border: 1rpx solid $cinnabar;
+  border-radius: $radius-sm;
 
   &__text {
-    font-size: $font-lg;
-    color: $danger-color;
-    font-weight: 500;
+    font-size: $font-md;
+    color: $cinnabar;
+    font-weight: $weight-medium;
+    letter-spacing: 2rpx;
+  }
+}
+
+/* ===== 尾签 ===== */
+.sign {
+  margin-top: $space-3xl;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-sm;
+
+  &__line {
+    width: 32rpx;
+    height: 1rpx;
+    background-color: $line-strong;
+  }
+
+  &__text {
+    font-family: $font-serif;
+    font-size: $font-xs;
+    color: $ink-faint;
+    letter-spacing: 4rpx;
+  }
+}
+
+.stats-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background-color: $card;
+  border: 1rpx solid $line;
+  border-radius: $radius-md;
+  padding: $space-lg 0;
+  margin-bottom: $space-lg;
+
+  &__item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space-xs;
+  }
+
+  &__divider {
+    width: 1rpx;
+    height: 60rpx;
+    background-color: $line-soft;
+  }
+
+  &__num {
+    font-family: $font-serif;
+    font-size: $font-xl;
+    color: $ink;
+    font-weight: $weight-semibold;
+  }
+
+  &__label {
+    font-size: $font-sm;
+    color: $ink-light;
+    letter-spacing: 2rpx;
   }
 }
 </style>

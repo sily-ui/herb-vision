@@ -14,8 +14,8 @@
 
 <script setup>
 /**
- * 分类导航组件
- * 横向滚动展示分类标签，点击选中
+ * 分类导航 · 墨韵版
+ * 文字下划线式选中态（无背景色块）
  */
 import { ref } from 'vue'
 
@@ -43,31 +43,41 @@ function onSelect(index, item) {
 <style lang="scss" scoped>
 .category-nav {
   white-space: nowrap;
-  padding: $spacing-sm 0;
+  padding: $space-sm 0;
   display: flex;
-  gap: $spacing-sm;
+  gap: $space-md;
 
   &__item {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 12rpx $spacing-lg;
-    border-radius: $radius-lg;
-    background-color: $bg-color;
+    padding: $space-xs 0;
     flex-shrink: 0;
+    position: relative;
 
     &--active {
-      background-color: $primary-color;
-
       .category-nav__text {
-        color: #FFFFFF;
+        color: $ink;
+        font-weight: $weight-semibold;
+      }
+
+      &::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 32rpx;
+        height: 2rpx;
+        background-color: $cinnabar;
       }
     }
   }
 
   &__text {
     font-size: $font-md;
-    color: $text-color;
+    color: $ink-light;
+    letter-spacing: 1rpx;
   }
 }
 </style>

@@ -1,64 +1,72 @@
 <template>
   <view class="page-identify">
-    <!-- 拍照/相册选择 -->
-    <view class="choose-actions" v-if="!imageList.length">
-      <view class="choose-actions__item" @click="onTakePhoto">
-        <text class="choose-actions__icon">&#x1F4F7;</text>
-        <text class="choose-actions__name">拍照识别</text>
-        <text class="choose-actions__desc">打开相机拍摄药材照片</text>
+    <!-- 空状态：双入口 -->
+    <view class="choose" v-if="!imageList.length">
+      <view class="choose__meta">
+        <text class="choose__meta-line"></text>
+        <text class="choose__meta-text">AI IDENTIFICATION · 智能鉴别</text>
       </view>
-      <view class="choose-actions__divider">
-        <text class="choose-actions__or">或</text>
+      <text class="choose__title">辨物识药</text>
+      <text class="choose__desc">拍摄或选取药材图像，AI 即刻比对辨析</text>
+
+      <view class="choose__cards">
+        <view class="choose-card" @click="onTakePhoto">
+          <view class="choose-card__seal">
+            <text class="choose-card__seal-char">摄</text>
+          </view>
+          <text class="choose-card__name">即时拍摄</text>
+          <text class="choose-card__desc">调用相机拍摄药材</text>
+        </view>
+        <view class="choose-card choose-card--alt" @click="onFromAlbum">
+          <view class="choose-card__seal choose-card__seal--alt">
+            <text class="choose-card__seal-char">选</text>
+          </view>
+          <text class="choose-card__name">相册选取</text>
+          <text class="choose-card__desc">从相册选择图片</text>
+        </view>
       </view>
-      <view class="choose-actions__item" @click="onFromAlbum">
-        <text class="choose-actions__icon">&#x1F5BC;</text>
-        <text class="choose-actions__name">相册选择</text>
-        <text class="choose-actions__desc">从手机相册选择图片</text>
+
+      <view class="choose__tip">
+        <text class="choose__tip-line"></text>
+        <text class="choose__tip-text">建议拍摄清晰药材外观</text>
+        <text class="choose__tip-line"></text>
       </view>
     </view>
 
-    <!-- 图片预览区域 -->
-    <view class="preview-area" v-if="imageList.length">
+    <!-- 预览状态 -->
+    <view class="preview" v-else>
+      <view class="preview__meta">
+        <text class="preview__meta-line"></text>
+        <text class="preview__meta-text">已选 {{ imageList.length }} 张</text>
+      </view>
+
       <view class="preview-list">
-        <view
-          class="preview-item"
-          v-for="(item, index) in imageList"
-          :key="index"
-        >
+        <view class="preview-item" v-for="(item, index) in imageList" :key="index">
           <image :src="item" mode="aspectFill" class="preview-item__img" />
           <view class="preview-item__delete" @click="onDeleteImage(index)">
-            <text>&#x2715;</text>
+            <text class="preview-item__delete-icon">✕</text>
+          </view>
+          <view class="preview-item__idx" v-if="index === 0">
+            <text class="preview-item__idx-text">主图</text>
           </view>
         </view>
-        <!-- 继续添加 -->
-        <view class="preview-item preview-item--add" @click="onAddMore" v-if="imageList.length < 9">
+        <view class="preview-item preview-item--add" v-if="imageList.length < 9" @click="onAddMore">
           <text class="preview-item__add-icon">+</text>
+          <text class="preview-item__add-text">追加</text>
         </view>
       </view>
 
-      <!-- 操作按钮 -->
-      <view class="action-row">
-        <view class="action-btn action-btn--secondary" @click="onTakePhoto">
-          <text class="action-btn__icon">&#x1F4F7;</text>
-          <text>拍照</text>
+      <!-- 进度条 -->
+      <view class="progress" v-if="uploading">
+        <view class="progress__track">
+          <view class="progress__fill" :style="{ width: uploadProgress + '%' }"></view>
         </view>
-        <view class="action-btn action-btn--secondary" @click="onFromAlbum">
-          <text class="action-btn__icon">&#x1F5BC;</text>
-          <text>相册</text>
-        </view>
+        <text class="progress__text">鉴別中 {{ uploadProgress }}%</text>
       </view>
 
-      <!-- 上传进度条 -->
-      <view class="progress-bar" v-if="uploading">
-        <view class="progress-bar__track">
-          <view class="progress-bar__fill" :style="{ width: uploadProgress + '%' }"></view>
-        </view>
-        <text class="progress-bar__text">上传中 {{ uploadProgress }}%</text>
-      </view>
-
-      <!-- 上传识别按钮 -->
-      <view class="submit-btn" :class="{ 'submit-btn--disabled': uploading }" @click="onIdentify">
-        <text class="submit-btn__text">{{ uploading ? '识别中...' : '开始识别' }}</text>
+      <!-- 提交按钮 -->
+      <view class="submit" :class="{ 'submit--disabled': uploading }" @click="onIdentify">
+        <text class="submit__text">{{ uploading ? '鉴别中…' : '开始鉴别' }}</text>
       </view>
     </view>
   </view>
@@ -66,8 +74,7 @@
 
 <script setup>
 /**
- * 识别入口页
- * 拍照/相册选择图片，上传识别
+ * 智能识别 · 墨韵版
  */
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
@@ -79,66 +86,41 @@ const uploading = ref(false)
 const uploadProgress = ref(0)
 
 onLoad((query) => {
-  // 如果从首页直接进入，根据source自动触发
-  if (query.source === 'camera') {
-    onTakePhoto()
-  } else if (query.source === 'album') {
-    onFromAlbum()
-  }
+  if (query.source === 'camera') onTakePhoto()
+  else if (query.source === 'album') onFromAlbum()
 })
 
-/**
- * 拍照
- */
 function onTakePhoto() {
   uni.chooseImage({
     count: 9 - imageList.value.length,
     sizeType: ['compressed'],
     sourceType: ['camera'],
-    success: (res) => {
-      imageList.value.push(...res.tempFilePaths)
-    }
+    success: (res) => imageList.value.push(...res.tempFilePaths)
   })
 }
 
-/**
- * 从相册选择
- */
 function onFromAlbum() {
   uni.chooseImage({
     count: 9 - imageList.value.length,
     sizeType: ['compressed'],
     sourceType: ['album'],
-    success: (res) => {
-      imageList.value.push(...res.tempFilePaths)
-    }
+    success: (res) => imageList.value.push(...res.tempFilePaths)
   })
 }
 
-/**
- * 继续添加图片
- */
 function onAddMore() {
   uni.chooseImage({
     count: 9 - imageList.value.length,
     sizeType: ['compressed'],
     sourceType: ['album', 'camera'],
-    success: (res) => {
-      imageList.value.push(...res.tempFilePaths)
-    }
+    success: (res) => imageList.value.push(...res.tempFilePaths)
   })
 }
 
-/**
- * 删除图片
- */
 function onDeleteImage(index) {
   imageList.value.splice(index, 1)
 }
 
-/**
- * 开始识别
- */
 async function onIdentify() {
   if (uploading.value || !imageList.value.length) return
 
@@ -146,23 +128,17 @@ async function onIdentify() {
   uploadProgress.value = 0
 
   try {
-    // 压缩第一张图片
     const compressedPath = await compressImage(imageList.value[0])
 
-    // 模拟进度
     const progressTimer = setInterval(() => {
-      if (uploadProgress.value < 90) {
-        uploadProgress.value += 10
-      }
+      if (uploadProgress.value < 90) uploadProgress.value += 10
     }, 300)
 
-    // 上传识别
     const result = await identifyImage(compressedPath)
 
     clearInterval(progressTimer)
     uploadProgress.value = 100
 
-    // 跳转结果页
     setTimeout(() => {
       uploading.value = false
       uploadProgress.value = 0
@@ -173,10 +149,7 @@ async function onIdentify() {
   } catch (err) {
     uploading.value = false
     uploadProgress.value = 0
-    uni.showToast({
-      title: '识别失败，请重试',
-      icon: 'none'
-    })
+    uni.showToast({ title: '鉴别失败，请重试', icon: 'none' })
   }
 }
 </script>
@@ -184,81 +157,180 @@ async function onIdentify() {
 <style lang="scss" scoped>
 .page-identify {
   min-height: 100vh;
-  background-color: $bg-color;
-  padding: $spacing-lg;
+  background-color: $paper;
+  padding: 0 $space-lg $space-3xl;
 }
 
-/* 选择操作 */
-.choose-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-top: 120rpx;
-  gap: $spacing-lg;
+/* ===== 空状态 ===== */
+.choose {
+  padding-top: $space-2xl;
 
-  &__item {
-    width: 100%;
+  &__meta {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    padding: $spacing-xl 0;
-    background-color: $card-bg;
-    border-radius: $radius-lg;
-    box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.06);
-    gap: $spacing-sm;
+    gap: $space-sm;
+    margin-bottom: $space-md;
   }
 
-  &__icon {
+  &__meta-line {
+    width: 32rpx;
+    height: 1rpx;
+    background-color: $ink-light;
+  }
+
+  &__meta-text {
+    font-size: $font-xs;
+    color: $ink-light;
+    letter-spacing: 3rpx;
+    font-weight: $weight-medium;
+  }
+
+  &__title {
     font-size: 80rpx;
-  }
-
-  &__name {
-    font-size: $font-xl;
-    font-weight: 600;
-    color: $text-color;
+    font-weight: $weight-bold;
+    color: $ink;
+    letter-spacing: 8rpx;
+    display: block;
   }
 
   &__desc {
     font-size: $font-sm;
-    color: $text-secondary;
+    color: $ink-light;
+    margin-top: $space-sm;
+    display: block;
+    letter-spacing: 1rpx;
   }
 
-  &__divider {
+  &__cards {
+    display: flex;
+    gap: $space-sm;
+    margin-top: $space-2xl;
+  }
+
+  &__tip {
     display: flex;
     align-items: center;
-    padding: $spacing-sm 0;
+    justify-content: center;
+    gap: $space-md;
+    margin-top: $space-2xl;
   }
 
-  &__or {
-    font-size: $font-sm;
-    color: $text-secondary;
+  &__tip-line {
+    width: 40rpx;
+    height: 1rpx;
+    background-color: $line-strong;
+  }
+
+  &__tip-text {
+    font-family: $font-serif;
+    font-size: $font-xs;
+    color: $ink-light;
+    letter-spacing: 2rpx;
   }
 }
 
-/* 预览区域 */
-.preview-area {
-  padding-top: $spacing-md;
+.choose-card {
+  flex: 1;
+  padding: $space-xl $space-md;
+  background-color: $card;
+  border: 1rpx solid $line;
+  border-radius: $radius-md;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-sm;
+
+  &--alt {
+    background-color: transparent;
+    border-style: dashed;
+  }
+
+  &__seal {
+    width: 96rpx;
+    height: 96rpx;
+    background-color: $cinnabar;
+    border-radius: $radius-sm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: $space-xs;
+    box-shadow: 0 4rpx 12rpx rgba(168, 54, 47, 0.2);
+
+    &--alt {
+      background-color: $ink;
+      box-shadow: 0 4rpx 12rpx rgba(26, 26, 26, 0.2);
+    }
+  }
+
+  &__seal-char {
+    font-family: $font-serif;
+    font-size: 48rpx;
+    color: #FFFFFF;
+    font-weight: $weight-bold;
+    line-height: 1;
+  }
+
+  &__name {
+    font-size: $font-md;
+    font-weight: $weight-semibold;
+    color: $ink;
+    letter-spacing: 2rpx;
+  }
+
+  &__desc {
+    font-size: $font-xs;
+    color: $ink-light;
+  }
+}
+
+/* ===== 预览状态 ===== */
+.preview {
+  padding-top: $space-xl;
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    margin-bottom: $space-md;
+  }
+
+  &__meta-line {
+    width: 32rpx;
+    height: 1rpx;
+    background-color: $ink-light;
+  }
+
+  &__meta-text {
+    font-family: $font-serif;
+    font-size: $font-xs;
+    color: $ink-light;
+    letter-spacing: 2rpx;
+  }
 }
 
 .preview-list {
   display: flex;
   flex-wrap: wrap;
-  gap: $spacing-sm;
+  gap: $space-sm;
 }
 
 .preview-item {
   position: relative;
-  width: 200rpx;
-  height: 200rpx;
-  border-radius: $radius-md;
+  width: 220rpx;
+  height: 220rpx;
+  border: 1rpx solid $line;
+  border-radius: $radius-sm;
   overflow: hidden;
+  background-color: $paper-deep;
 
   &--add {
-    border: 2rpx dashed $border-color;
+    border-style: dashed;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    background-color: $bg-color;
+    gap: $space-xs;
+    background-color: transparent;
   }
 
   &__img {
@@ -272,88 +344,89 @@ async function onIdentify() {
     right: 0;
     width: 44rpx;
     height: 44rpx;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(26, 26, 26, 0.7);
     display: flex;
     align-items: center;
     justify-content: center;
+    border-radius: 0 0 0 $radius-xs;
+  }
+
+  &__delete-icon {
     color: #FFFFFF;
     font-size: $font-xs;
-    border-radius: 0 0 0 $radius-sm;
+  }
+
+  &__idx {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    padding: 2rpx 12rpx;
+    background-color: $cinnabar;
+    border-radius: 0 $radius-xs 0 0;
+  }
+
+  &__idx-text {
+    font-size: $font-xs;
+    color: #FFFFFF;
+    letter-spacing: 1rpx;
   }
 
   &__add-icon {
     font-size: 48rpx;
-    color: $text-secondary;
+    color: $ink-light;
+  }
+
+  &__add-text {
+    font-size: $font-xs;
+    color: $ink-light;
+    letter-spacing: 2rpx;
   }
 }
 
-.action-row {
-  display: flex;
-  gap: $spacing-md;
-  margin-top: $spacing-lg;
-}
-
-.action-btn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: $spacing-xs;
-  padding: $spacing-md;
-  border-radius: $radius-md;
-  background-color: $accent-color;
-  font-size: $font-md;
-  color: $primary-color;
-
-  &__icon {
-    font-size: $font-lg;
-  }
-}
-
-/* 进度条 */
-.progress-bar {
-  margin-top: $spacing-lg;
+/* ===== 进度条 ===== */
+.progress {
+  margin-top: $space-xl;
 
   &__track {
-    height: 12rpx;
-    background-color: $border-color;
-    border-radius: 6rpx;
+    height: 4rpx;
+    background-color: $line;
     overflow: hidden;
   }
 
   &__fill {
     height: 100%;
-    background: linear-gradient(90deg, $primary-color, $secondary-color);
-    border-radius: 6rpx;
+    background-color: $cinnabar;
     transition: width 0.3s;
   }
 
   &__text {
+    font-family: $font-serif;
     font-size: $font-sm;
-    color: $text-secondary;
-    margin-top: $spacing-xs;
+    color: $ink-soft;
+    margin-top: $space-sm;
     display: block;
     text-align: center;
+    letter-spacing: 2rpx;
   }
 }
 
-/* 提交按钮 */
-.submit-btn {
-  margin-top: $spacing-xl;
-  padding: $spacing-lg 0;
-  background: linear-gradient(135deg, $primary-color, $secondary-color);
-  border-radius: $radius-lg;
+/* ===== 提交按钮 ===== */
+.submit {
+  margin-top: $space-2xl;
+  padding: $space-lg 0;
+  background-color: $ink;
   text-align: center;
-  box-shadow: 0 4rpx 16rpx rgba(43, 122, 120, 0.3);
+  border-radius: $radius-sm;
 
   &--disabled {
-    opacity: 0.6;
+    opacity: 0.5;
   }
 
   &__text {
-    font-size: $font-lg;
-    font-weight: 600;
+    font-size: $font-md;
     color: #FFFFFF;
+    font-weight: $weight-medium;
+    letter-spacing: 4rpx;
   }
 }
 </style>

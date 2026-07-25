@@ -27,8 +27,8 @@
     <!-- 空状态 -->
     <view class="empty-state" v-else-if="!loading">
       <text class="empty-state__icon">&#x2B50;</text>
-      <text class="empty-state__text">还没有收藏任何药材</text>
-      <text class="empty-state__hint">去知识库浏览并收藏感兴趣的药材吧</text>
+      <text class="empty-state__text">{{ userStore.isLogin ? '还没有收藏任何药材' : '请先登录' }}</text>
+      <text class="empty-state__hint">{{ userStore.isLogin ? '去知识库浏览并收藏感兴趣的药材吧' : '登录后查看收藏的药材' }}</text>
     </view>
 
     <!-- 加载状态 -->
@@ -45,9 +45,11 @@
  */
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
+import { useUserStore } from '@/store/user'
 import { getFavorites, removeFavorite } from '@/api/user'
 import CategoryNav from '@/components/CategoryNav.vue'
 
+const userStore = useUserStore()
 const favoriteList = ref([])
 const loading = ref(false)
 const currentFilter = ref('')
@@ -61,7 +63,13 @@ const filterCategories = ref([
 ])
 
 onShow(() => {
-  loadFavorites()
+  userStore.checkLogin()
+  if (userStore.isLogin) {
+    loadFavorites()
+  } else {
+    favoriteList.value = []
+    loading.value = false
+  }
 })
 
 /**
@@ -73,7 +81,7 @@ async function loadFavorites() {
     const params = { page: 1, pageSize: 50 }
     if (currentFilter.value) params.category = currentFilter.value
     const data = await getFavorites(params)
-    favoriteList.value = data.list || data || []
+    favoriteList.value = data.items || data.list || data || []
   } catch (err) {
     favoriteList.value = []
   } finally {

@@ -2,11 +2,11 @@
  * 请求封装 - 基于 uni.request
  */
 
-// 开发环境基础地址（与后端 FastAPI 端口一致）
+// 开发环境基础地址
 const BASE_URL = 'http://localhost:8000'
 
 // 请求超时时间
-const TIMEOUT = 30000
+const TIMEOUT = 15000
 
 /**
  * 统一请求拦截 - 自动注入token
@@ -23,67 +23,63 @@ function getRequestHeader() {
 }
 
 /**
- * 统一响应拦截 - 处理错误和401
+ * 统一响应拦截 - 兼容两种返回格式：
+ *   1) 业务包装: { code, data, message }
+ *   2) 裸字典:   { items, total, page, page_size, ... }
+ * 同时对 401 仅做静默处理，由业务层决定是否跳转登录。
  */
 function handleResponse(response) {
   const { statusCode, data } = response
 
   if (statusCode === 401) {
-    // token过期，跳转登录
     uni.removeStorageSync('token')
-    uni.showToast({
-      title: '登录已过期，请重新登录',
-      icon: 'none'
-    })
-    setTimeout(() => {
-      uni.reLaunch({
-        url: '/pages/mine/index'
-      })
-    }, 1500)
-    return Promise.reject(new Error('登录已过期'))
+    const err = new Error('未登录')
+    err.code = 401
+    err.silent = true
+    return Promise.reject(err)
   }
 
-  if (statusCode >= 200 && statusCode < 300) {
-    // 后端返回格式 { code, data, message }
+  if (statusCode < 200 || statusCode >= 300) {
+    const err = new Error(`请求错误(${statusCode})`)
+    err.code = statusCode
+    return Promise.reject(err)
+  }
+
+  if (data === null || data === undefined) return Promise.resolve({})
+
+  if (typeof data === 'object' && 'code' in data) {
     if (data.code === 0 || data.code === 200) {
-      return data.data
+      return Promise.resolve(data.data === undefined ? data : data.data)
     }
-    // 业务错误
-    uni.showToast({
-      title: data.message || '请求失败',
-      icon: 'none'
-    })
-    return Promise.reject(new Error(data.message || '请求失败'))
+    const err = new Error(data.message || '请求失败')
+    err.code = data.code
+    return Promise.reject(err)
   }
 
-  // HTTP错误
-  uni.showToast({
-    title: `请求错误(${statusCode})`,
-    icon: 'none'
-  })
-  return Promise.reject(new Error(`请求错误(${statusCode})`))
+  return Promise.resolve(data)
 }
 
 /**
  * GET请求
  */
-export function get(url, params = {}) {
+export function get(url, params = {}, options = {}) {
   return new Promise((resolve, reject) => {
     uni.request({
       url: BASE_URL + url,
       method: 'GET',
       data: params,
       header: getRequestHeader(),
-      timeout: TIMEOUT,
+      timeout: options.timeout || TIMEOUT,
       success: (res) => {
         handleResponse(res).then(resolve).catch(reject)
       },
       fail: (err) => {
-        uni.showToast({
-          title: '网络请求失败',
-          icon: 'none'
-        })
-        reject(err)
+        const e = new Error('网络请求失败')
+        e.code = -1
+        if (!options.silent) {
+          uni.showToast({ title: '网络请求失败', icon: 'none' })
+        }
+        reject(e)
       }
     })
   })
@@ -92,23 +88,34 @@ export function get(url, params = {}) {
 /**
  * POST请求
  */
-export function post(url, data = {}) {
+export function post(url, data = {}, options = {}) {
   return new Promise((resolve, reject) => {
+    // 将 query 参数拼到 URL 上（POST 也支持 query）
+    let fullUrl = BASE_URL + url
+    if (options.params && Object.keys(options.params).length) {
+      const qs = Object.entries(options.params)
+        .filter(([, v]) => v !== undefined && v !== null && v !== '')
+        .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+        .join('&')
+      if (qs) fullUrl += (fullUrl.includes('?') ? '&' : '?') + qs
+    }
+
     uni.request({
-      url: BASE_URL + url,
+      url: fullUrl,
       method: 'POST',
       data,
       header: getRequestHeader(),
-      timeout: TIMEOUT,
+      timeout: options.timeout || TIMEOUT,
       success: (res) => {
         handleResponse(res).then(resolve).catch(reject)
       },
       fail: (err) => {
-        uni.showToast({
-          title: '网络请求失败',
-          icon: 'none'
-        })
-        reject(err)
+        const e = new Error('网络请求失败')
+        e.code = -1
+        if (!options.silent) {
+          uni.showToast({ title: '网络请求失败', icon: 'none' })
+        }
+        reject(e)
       }
     })
   })
@@ -117,7 +124,7 @@ export function post(url, data = {}) {
 /**
  * 文件上传 - 基于 uni.uploadFile
  */
-export function upload(url, filePath, name = 'file', formData = {}) {
+export function upload(url, filePath, name = 'file', formData = {}, options = {}) {
   return new Promise((resolve, reject) => {
     const token = uni.getStorageSync('token')
     const header = {}
@@ -131,30 +138,18 @@ export function upload(url, filePath, name = 'file', formData = {}) {
       name,
       formData,
       header,
-      timeout: TIMEOUT,
+      timeout: options.timeout || TIMEOUT,
       success: (res) => {
-        // uploadFile 返回的 data 是字符串，需要解析
         const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data
-        if (res.statusCode >= 200 && res.statusCode < 300) {
-          if (data.code === 0 || data.code === 200) {
-            resolve(data.data)
-          } else {
-            uni.showToast({
-              title: data.message || '上传失败',
-              icon: 'none'
-            })
-            reject(new Error(data.message || '上传失败'))
-          }
-        } else {
-          reject(new Error(`上传错误(${res.statusCode})`))
-        }
+        handleResponse({ statusCode: res.statusCode, data }).then(resolve).catch(reject)
       },
       fail: (err) => {
-        uni.showToast({
-          title: '上传失败',
-          icon: 'none'
-        })
-        reject(err)
+        const e = new Error('网络请求失败')
+        e.code = -1
+        if (!options.silent) {
+          uni.showToast({ title: '网络请求失败', icon: 'none' })
+        }
+        reject(e)
       }
     })
   })

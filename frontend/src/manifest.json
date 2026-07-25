@@ -20,13 +20,7 @@
       },
       "scope.writePhotosAlbum": {
         "desc": "用于保存识别结果图片"
-      },
-      "scope.userLocation": {
-        "desc": "用于获取用户位置信息"
       }
-    },
-    "requiredPrivateInfos": [
-      "chooseImage"
-    ]
+    }
   }
 }

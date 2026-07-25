@@ -1,221 +1,433 @@
 <template>
   <view class="page-knowledge">
-    <!-- 顶部搜索栏 -->
-    <view class="search-wrap">
-      <SearchBar placeholder="搜索药材名称、功效..." @search="onSearch" />
+    <!-- 搜索栏 -->
+    <view class="search-bar">
+      <SearchBar placeholder="检索药材名、功效、性状..." @search="onSearch" />
     </view>
 
-    <!-- 分类导航：按部位 -->
-    <view class="category-section">
-      <text class="category-section__title">按部位分类</text>
-      <CategoryNav :categories="partCategories" @select="onPartSelect" />
-    </view>
+    <!-- 分类筛选 -->
+    <view class="filter">
+      <!-- 部位 -->
+      <view class="filter__row">
+        <text class="filter__label">部位</text>
+        <scroll-view class="filter__scroll" scroll-x enable-flex>
+          <view
+            v-for="(item, index) in partCategories"
+            :key="'p'+index"
+            class="filter__chip"
+            :class="{ 'filter__chip--active': partIndex === index }"
+            @click="onPartSelect(index, item)"
+          >
+            <text class="filter__chip-text">{{ item.name }}</text>
+          </view>
+        </scroll-view>
+      </view>
 
-    <!-- 分类导航：按功效 -->
-    <view class="category-section">
-      <text class="category-section__title">按功效分类</text>
-      <CategoryNav :categories="effectCategories" @select="onEffectSelect" />
-    </view>
-
-    <!-- 药材网格列表 -->
-    <view class="herb-grid">
-      <view class="herb-grid__item" v-for="(item, index) in herbList" :key="index">
-        <HerbCard :herb="item" />
+      <!-- 功效 -->
+      <view class="filter__row">
+        <text class="filter__label">功效</text>
+        <scroll-view class="filter__scroll" scroll-x enable-flex>
+          <view
+            v-for="(item, index) in effectCategories"
+            :key="'e'+index"
+            class="filter__chip"
+            :class="{ 'filter__chip--active': effectIndex === index }"
+            @click="onEffectSelect(index, item)"
+          >
+            <text class="filter__chip-text">{{ item.name }}</text>
+          </view>
+        </scroll-view>
       </view>
     </view>
 
-    <!-- 加载状态 -->
-    <view class="loading-tip" v-if="loading">
-      <text class="loading-tip__text">加载中...</text>
+    <!-- 数量 + 视图切换 -->
+    <view class="count">
+      <text class="count__text">共 {{ total }} 味</text>
+      <text class="count__toggle" @click="viewMode = viewMode === 'grid' ? 'table' : 'grid'">
+        {{ viewMode === 'grid' ? '表格' : '卡片' }}
+      </text>
     </view>
-    <view class="loading-tip" v-else-if="!herbList.length">
-      <text class="loading-tip__text">暂无药材数据</text>
+
+    <!-- 列表 -->
+    <view v-if="herbList.length">
+      <view v-if="viewMode === 'grid'" class="herb-grid">
+        <view
+          v-for="item in herbList"
+          :key="item.id"
+          class="herb-grid__item"
+        >
+          <HerbCard :herb="item" />
+        </view>
+      </view>
+
+      <view v-else class="herb-table">
+        <view class="herb-table__head">
+          <text class="herb-table__col herb-table__col--idx">#</text>
+          <text class="herb-table__col herb-table__col--name">药材名</text>
+          <text class="herb-table__col herb-table__col--part">部位</text>
+          <text class="herb-table__col herb-table__col--effect">功效</text>
+        </view>
+        <view
+          v-for="(item, index) in herbList"
+          :key="item.id"
+          class="herb-table__row"
+          @click="goDetail(item)"
+        >
+          <text class="herb-table__col herb-table__col--idx">{{ index + 1 }}</text>
+          <text class="herb-table__col herb-table__col--name">{{ item.name }}</text>
+          <text class="herb-table__col herb-table__col--part">{{ item.category_part || '-' }}</text>
+          <text class="herb-table__col herb-table__col--effect">{{ item.category_efficacy || '-' }}</text>
+        </view>
+      </view>
     </view>
-    <view class="loading-tip" v-else-if="noMore">
-      <text class="loading-tip__text">没有更多了</text>
+
+    <!-- 状态 -->
+    <view v-if="loading" class="status">
+      <text class="status__text">采撷中…</text>
+    </view>
+
+    <view v-else-if="!herbList.length && loadError" class="status">
+      <text class="status__text">{{ loadError }}</text>
+      <view class="status__retry" @click="loadHerbs(true)">
+        <text class="status__retry-text">点击重试</text>
+      </view>
+    </view>
+
+    <view v-else-if="!herbList.length" class="status">
+      <text class="status__text">本类暂无记录</text>
+    </view>
+
+    <view v-else-if="!noMore" class="status" @click="loadMore">
+      <text class="status__text status__text--clickable">点击加载更多</text>
+    </view>
+
+    <view v-else class="status">
+      <text class="status__text">— 已至卷末 —</text>
     </view>
   </view>
 </template>
 
 <script setup>
 /**
- * 知识库首页
- * 搜索栏、分类导航、药材列表
+ * 知识库 · 按分类罗列
  */
 import { ref } from 'vue'
-import { onPullDownRefresh, onReachBottom } from '@dcloudio/uni-app'
+import { onShow, onPullDownRefresh, onReachBottom } from '@dcloudio/uni-app'
 import { getHerbs } from '@/api/knowledge'
 import { useHerbStore } from '@/store/herb'
 import SearchBar from '@/components/SearchBar.vue'
-import CategoryNav from '@/components/CategoryNav.vue'
 import HerbCard from '@/components/HerbCard.vue'
 
 const herbStore = useHerbStore()
 
 const herbList = ref([])
 const loading = ref(false)
+const loadError = ref('')
 const noMore = ref(false)
 const page = ref(1)
+const total = ref(0)
 const pageSize = 20
-const currentPart = ref('')
-const currentEffect = ref('')
+const viewMode = ref('grid')
 
-// 按部位分类
+// 部位（value 须与后端 herbs.category_part 一致）
 const partCategories = ref([
   { name: '全部', value: '' },
-  { name: '根及根茎', value: 'root' },
-  { name: '茎木', value: 'stem' },
-  { name: '皮', value: 'bark' },
-  { name: '叶', value: 'leaf' },
-  { name: '花', value: 'flower' },
-  { name: '果实种子', value: 'fruit' },
-  { name: '全草', value: 'herb' },
-  { name: '动物类', value: 'animal' },
-  { name: '矿物类', value: 'mineral' }
+  { name: '根及根茎', value: '根及根茎' },
+  { name: '茎木', value: '茎木' },
+  { name: '皮', value: '皮' },
+  { name: '叶', value: '叶' },
+  { name: '花', value: '花' },
+  { name: '果实种子', value: '果实种子' },
+  { name: '全草', value: '全草' },
+  { name: '动物类', value: '动物类' },
+  { name: '矿物类', value: '矿物类' }
 ])
 
-// 按功效分类
+// 功效（value 须与后端 herbs.category_efficacy 一致）
 const effectCategories = ref([
   { name: '全部', value: '' },
-  { name: '解表药', value: 'diaphoretic' },
-  { name: '清热药', value: 'heat_clearing' },
-  { name: '泻下药', value: 'purgative' },
-  { name: '祛风湿药', value: 'wind_damp' },
-  { name: '化湿药', value: 'damp_resolving' },
-  { name: '利水渗湿药', value: 'diuretic' },
-  { name: '温里药', value: 'interior_warming' },
-  { name: '理气药', value: 'qi_regulating' },
-  { name: '消食药', value: 'digestive' },
-  { name: '止血药', value: 'hemostatic' },
-  { name: '活血化瘀药', value: 'blood_activating' },
-  { name: '补虚药', value: 'tonifying' }
+  { name: '解表', value: '解表' },
+  { name: '清热', value: '清热' },
+  { name: '泻下', value: '泻下' },
+  { name: '祛风湿', value: '祛风湿' },
+  { name: '化湿', value: '化湿' },
+  { name: '利水渗湿', value: '利水渗湿' },
+  { name: '温里', value: '温里' },
+  { name: '理气', value: '理气' },
+  { name: '消食', value: '消食' },
+  { name: '止血', value: '止血' },
+  { name: '活血化瘀', value: '活血化瘀' },
+  { name: '补益', value: '补益' }
 ])
 
-// 初始加载
-loadHerbs()
+const currentPart = ref('')
+const currentEffect = ref('')
+const partIndex = ref(0)
+const effectIndex = ref(0)
 
-/**
- * 加载药材列表
- */
+onShow(() => {
+  if (!herbList.value.length) {
+    loadHerbs(true)
+  }
+})
+
+onPullDownRefresh(() => {
+  loadHerbs(true).finally(() => uni.stopPullDownRefresh())
+})
+
+onReachBottom(() => {
+  if (!noMore.value && !loading.value) {
+    loadMore()
+  }
+})
+
 async function loadHerbs(reset = false) {
   if (loading.value) return
   if (reset) {
     page.value = 1
     noMore.value = false
+    loadError.value = ''
   }
 
   loading.value = true
   try {
-    const params = {
+    const data = await getHerbs({
       page: page.value,
-      pageSize
-    }
-    if (currentPart.value) params.part = currentPart.value
-    if (currentEffect.value) params.category = currentEffect.value
-
-    const data = await getHerbs(params)
-    const list = data.list || data || []
-
+      pageSize,
+      categoryPart: currentPart.value || undefined,
+      categoryEfficacy: currentEffect.value || undefined
+    })
+    const list = data.items || data.list || data || []
     if (reset) {
       herbList.value = list
     } else {
       herbList.value.push(...list)
     }
-
-    if (list.length < pageSize) {
-      noMore.value = true
-    }
+    total.value = data.total || list.length
+    if (list.length < pageSize) noMore.value = true
   } catch (err) {
-    // 静默处理
+    if (reset) {
+      herbList.value = []
+      total.value = 0
+    }
+    loadError.value = '连接服务失败，请确认后端已启动'
   } finally {
     loading.value = false
   }
 }
 
-/**
- * 搜索
- */
+function loadMore() {
+  page.value += 1
+  loadHerbs()
+}
+
 function onSearch(keyword) {
+  if (!keyword || !keyword.trim()) return
   herbStore.addSearchHistory(keyword)
   uni.navigateTo({
     url: `/pages/knowledge/search?keyword=${encodeURIComponent(keyword)}`
   })
 }
 
-/**
- * 按部位选择
- */
-function onPartSelect({ item }) {
+function onPartSelect(index, item) {
+  partIndex.value = index
   currentPart.value = item.value || ''
   loadHerbs(true)
 }
 
-/**
- * 按功效选择
- */
-function onEffectSelect({ item }) {
+function onEffectSelect(index, item) {
+  effectIndex.value = index
   currentEffect.value = item.value || ''
   loadHerbs(true)
 }
 
-// 下拉刷新
-onPullDownRefresh(() => {
-  loadHerbs(true).then(() => {
-    uni.stopPullDownRefresh()
-  })
-})
-
-// 上拉加载更多
-onReachBottom(() => {
-  if (!noMore.value) {
-    page.value++
-    loadHerbs()
-  }
-})
+function goDetail(item) {
+  uni.navigateTo({ url: `/pages/knowledge/detail?id=${item.id}` })
+}
 </script>
 
 <style lang="scss" scoped>
 .page-knowledge {
   min-height: 100vh;
-  background-color: $bg-color;
+  background-color: $paper;
+  padding-bottom: $space-3xl;
 }
 
-.search-wrap {
-  padding: $spacing-md $spacing-lg;
-  background-color: $card-bg;
+/* 搜索栏 */
+.search-bar {
+  padding: $space-md $space-lg;
+  background-color: $paper;
 }
 
-.category-section {
-  padding: $spacing-sm $spacing-lg;
-  background-color: $card-bg;
-  margin-bottom: $spacing-sm;
+/* 分类筛选 */
+.filter {
+  background-color: $paper;
+  padding: 0 $space-lg $space-sm;
 
-  &__title {
+  &__row {
+    display: flex;
+    align-items: center;
+    padding: $space-sm 0;
+  }
+
+  &__label {
     font-size: $font-sm;
-    color: $text-secondary;
-    display: block;
-    margin-bottom: $spacing-xs;
+    color: $ink-light;
+    width: 56rpx;
+    flex-shrink: 0;
+    letter-spacing: 1rpx;
+  }
+
+  &__scroll {
+    flex: 1;
+    white-space: nowrap;
+  }
+
+  &__chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 8rpx 22rpx;
+    margin-right: 16rpx;
+    border-radius: 100rpx;
+    background-color: $card;
+    border: 1rpx solid $line;
+    transition: all 0.2s;
+    flex-shrink: 0;
+
+    &--active {
+      background-color: $ink;
+      border-color: $ink;
+
+      .filter__chip-text {
+        color: $card;
+        font-weight: $weight-medium;
+      }
+    }
+  }
+
+  &__chip-text {
+    font-size: $font-sm;
+    color: $ink-soft;
+    letter-spacing: 1rpx;
   }
 }
 
+/* 数量 */
+.count {
+  padding: $space-md $space-lg $space-sm;
+
+  &__text {
+    font-size: $font-sm;
+    color: $ink-light;
+    letter-spacing: 1rpx;
+  }
+}
+
+/* 列表 */
 .herb-grid {
   display: flex;
   flex-wrap: wrap;
-  padding: $spacing-md;
-  gap: $spacing-md;
+  padding: 0 $space-lg;
+  gap: $space-md;
 
   &__item {
     width: calc(50% - 12rpx);
   }
 }
 
-.loading-tip {
-  padding: $spacing-xl 0;
+/* 表格 */
+.herb-table {
+  margin: 0 $space-lg;
+  border: 1rpx solid $line;
+  border-radius: $radius-md;
+  overflow: hidden;
+
+  &__head {
+    display: flex;
+    background-color: $paper-deep;
+    padding: $space-sm $space-md;
+    border-bottom: 1rpx solid $line;
+  }
+
+  &__row {
+    display: flex;
+    padding: $space-md;
+    border-bottom: 1rpx solid $line;
+    background-color: $card;
+    transition: background-color 0.2s;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:active {
+      background-color: $paper-warm;
+    }
+  }
+
+  &__col {
+    font-size: $font-sm;
+    color: $ink;
+    letter-spacing: 1rpx;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &--idx {
+      width: 64rpx;
+      flex-shrink: 0;
+      text-align: center;
+      font-family: $font-serif;
+      color: $ink-light;
+    }
+
+    &--name {
+      flex: 2;
+      font-weight: $weight-semibold;
+    }
+
+    &--part {
+      flex: 1;
+      color: $ink-soft;
+    }
+
+    &--effect {
+      flex: 2;
+      color: $ink-soft;
+    }
+  }
+}
+
+/* 状态 */
+.status {
+  padding: $space-2xl 0;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-md;
 
   &__text {
     font-size: $font-sm;
-    color: $text-secondary;
+    color: $ink-faint;
+    letter-spacing: 2rpx;
+
+    &--clickable {
+      color: $ink-light;
+    }
+  }
+
+  &__retry {
+    padding: 12rpx 32rpx;
+    border: 1rpx solid $line;
+    border-radius: $radius-sm;
+    background-color: $card;
+  }
+
+  &__retry-text {
+    font-size: $font-sm;
+    color: $ink-soft;
+    letter-spacing: 2rpx;
   }
 }
 </style>

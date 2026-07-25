@@ -3,118 +3,135 @@
     {
       "path": "pages/index/index",
       "style": {
-        "navigationBarTitleText": "AI中药识别",
-        "navigationStyle": "custom"
+        "navigationBarTitleText": "本草",
+        "navigationBarBackgroundColor": "#FAF8F3",
+        "navigationBarTextStyle": "black"
       }
     },
     {
       "path": "pages/identify/index",
       "style": {
-        "navigationBarTitleText": "智能识别"
+        "navigationBarTitleText": "智能识别",
+        "navigationBarBackgroundColor": "#FAF8F3",
+        "navigationBarTextStyle": "black"
       }
     },
     {
       "path": "pages/identify/result",
       "style": {
-        "navigationBarTitleText": "识别结果"
+        "navigationBarTitleText": "识别结果",
+        "navigationBarBackgroundColor": "#FAF8F3",
+        "navigationBarTextStyle": "black"
       }
     },
     {
       "path": "pages/knowledge/index",
       "style": {
-        "navigationBarTitleText": "药材知识库"
+        "navigationBarTitleText": "知识库",
+        "navigationBarBackgroundColor": "#FAF8F3",
+        "navigationBarTextStyle": "black"
       }
     },
     {
       "path": "pages/knowledge/detail",
       "style": {
-        "navigationBarTitleText": "药材详情"
+        "navigationBarTitleText": "药材详录",
+        "navigationBarBackgroundColor": "#FAF8F3",
+        "navigationBarTextStyle": "black"
       }
     },
     {
       "path": "pages/knowledge/search",
       "style": {
-        "navigationBarTitleText": "搜索药材"
+        "navigationBarTitleText": "检索",
+        "navigationBarBackgroundColor": "#FAF8F3",
+        "navigationBarTextStyle": "black"
       }
     },
     {
       "path": "pages/compare/index",
       "style": {
-        "navigationBarTitleText": "混淆药材对比"
+        "navigationBarTitleText": "辨伪对比",
+        "navigationBarBackgroundColor": "#FAF8F3",
+        "navigationBarTextStyle": "black"
       }
     },
     {
       "path": "pages/learn/index",
       "style": {
-        "navigationBarTitleText": "学习中心"
+        "navigationBarTitleText": "学习",
+        "navigationBarBackgroundColor": "#FAF8F3",
+        "navigationBarTextStyle": "black"
       }
     },
     {
       "path": "pages/learn/favorites",
       "style": {
-        "navigationBarTitleText": "我的收藏"
+        "navigationBarTitleText": "我的收藏",
+        "navigationBarBackgroundColor": "#FAF8F3",
+        "navigationBarTextStyle": "black"
       }
     },
     {
       "path": "pages/mine/index",
       "style": {
-        "navigationBarTitleText": "个人中心"
+        "navigationBarTitleText": "我",
+        "navigationBarBackgroundColor": "#FAF8F3",
+        "navigationBarTextStyle": "black"
       }
     },
     {
       "path": "pages/mine/records",
       "style": {
-        "navigationBarTitleText": "识别记录"
+        "navigationBarTitleText": "识别记录",
+        "navigationBarBackgroundColor": "#FAF8F3",
+        "navigationBarTextStyle": "black"
       }
     },
     {
       "path": "pages/mine/profile",
       "style": {
-        "navigationBarTitleText": "编辑资料"
+        "navigationBarTitleText": "编辑资料",
+        "navigationBarBackgroundColor": "#FAF8F3",
+        "navigationBarTextStyle": "black"
       }
     },
     {
       "path": "pages/feedback/index",
       "style": {
-        "navigationBarTitleText": "意见反馈"
+        "navigationBarTitleText": "意见反馈",
+        "navigationBarBackgroundColor": "#FAF8F3",
+        "navigationBarTextStyle": "black"
       }
     }
   ],
   "globalStyle": {
     "navigationBarTextStyle": "black",
-    "navigationBarTitleText": "AI中药识别",
-    "navigationBarBackgroundColor": "#FFFFFF",
-    "backgroundColor": "#F7F8FA"
+    "navigationBarTitleText": "本草",
+    "navigationBarBackgroundColor": "#FAF8F3",
+    "backgroundColor": "#FAF8F3"
   },
   "tabBar": {
-    "color": "#8796A5",
-    "selectedColor": "#2B7A78",
-    "backgroundColor": "#FFFFFF",
+    "color": "#8C8C8C",
+    "selectedColor": "#1A1A1A",
+    "backgroundColor": "#FAF8F3",
     "borderStyle": "white",
     "list": [
       {
         "pagePath": "pages/index/index",
-        "text": "首页",
-        "iconPath": "static/images/tab/home.png",
-        "selectedIconPath": "static/images/tab/home-active.png"
+        "text": "首页"
       },
       {
         "pagePath": "pages/knowledge/index",
-        "text": "知识库",
-        "iconPath": "static/images/tab/knowledge.png",
-        "selectedIconPath": "static/images/tab/knowledge-active.png"
+        "text": "知识库"
       },
       {
         "pagePath": "pages/learn/index",
-        "text": "学习",
-        "iconPath": "static/images/tab/learn.png",
-        "selectedIconPath": "static/images/tab/learn-active.png"
+        "text": "学习"
       },
       {
         "pagePath": "pages/mine/index",
-        "text": "我的",
-        "iconPath": "static/images/tab/mine.png",
-        "selectedIconPath": "static/images/tab/mine-active.png"
+        "text": "我"
       }
     ]
   }
