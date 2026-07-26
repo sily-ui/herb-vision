@@ -22,11 +22,12 @@ Herb Vision 是一款面向中医药教学、临床参考与大众科普的中�
 ## 二、功能特性
 
 ### 核心功能
-- 📷 **AI 拍照识药**：上传中草药图片，调用阶跃星辰 Step 3.7 Flash 多模态模型识别，返回药典标准名称、来源、性味归经、功效主治、用法用量、禁忌、外观特征、真伪鉴别要点、易混淆药材等结构化结果；
+- 🔑 **微信一键登录**：启动页调用 `wx.login` 获取 code，后端换取 openid 后签发 JWT，无需手动输入账号密码；未配置微信凭证时自动进入开发模拟登录；
+- 📷 **AI 拍照识药**：上传中草药图片，调用阶跃星辰 Step 3.7 Flash 多模态模型识别，返回药典标准名称、来源、性味归经、功效主治、用法用量、禁忌、外观特征、真伪鉴别要点、易混淆药材等结构化结果；识别命中知识库药材时自动展示知识库配图；
 - 🔍 **智能置信度**：识别结果附带高/中/低置信度标注，低置信度时提示用户复核；
-- 🗂️ **药材知识库**：内置药材数据库，支持按部位/功效分类筛选、关键词搜索、分页浏览；
+- 🗂️ **药材知识库**：内置药材数据库，支持按部位（根及根茎、花、果实种子、全草或叶等）分类筛选、关键词搜索、分页浏览；
 - ⚖️ **相似药材对比**：选择两种药材并排对比性味、功效、外观、鉴别要点等关键字段；
-- 📚 **个性化学习**：自动记录用户的识别历史与收藏，便于复习复盘；
+- 📚 **个性化学习**：自动记录识别历史，支持按分类筛选收藏夹，已收藏药材在详情页实时显示收藏状态；
 - 💬 **用户反馈**：支持识别纠错、数据缺失、其他问题三类反馈，形成数据闭环。
 
 ### 系统特性
@@ -94,6 +95,7 @@ herb-vision/
 │   │   │   ├── user.py            # 用户表
 │   │   │   ├── herb.py            # 药材知识库表
 │   │   │   ├── identify_record.py # 识别记录表
+│   │   │   ├── favorite.py        # 用户收藏表
 │   │   │   └── feedback.py        # 用户反馈表
 │   │   ├── routers/               # API 路由
 │   │   │   ├── user.py            # 登录/资料/记录/收藏
@@ -111,6 +113,7 @@ herb-vision/
 ├── frontend/                      # 前端 uni-app 小程序
 │   ├── src/
 │   │   ├── pages/                 # 页面
+│   │   │   ├── login/             # 微信一键登录页
 │   │   │   ├── identify/          # 拍照识别 + 结果展示
 │   │   │   ├── knowledge/         # 知识库列表/详情/搜索
 │   │   │   ├── compare/           # 药材对比
@@ -137,6 +140,7 @@ herb-vision/
 | `users` | 用户表 | id, openid, nickname, avatar_url, phone, created_at |
 | `herbs` | 药材知识库 | id, name, aliases, family, source, part_used, nature_taste, meridian_tropism, efficacy, indications, usage_dosage, contraindications, appearance_*, authenticity_tips, confusable_herbs, category_part, category_efficacy ... |
 | `identify_records` | 识别记录 | id, user_id, image_path, herb_name, confidence, result_json, is_favorited, created_at |
+| `favorites` | 用户收藏 | id, user_id, herb_id, created_at |
 | `feedbacks` | 用户反馈 | id, user_id, herb_id, feedback_type, content, image_path, status, admin_reply, created_at |
 
 ---
@@ -150,7 +154,9 @@ herb-vision/
 | PUT  | `/api/user/profile` | 更新用户信息 |
 | GET  | `/api/user/records` | 识别记录列表（分页） |
 | DELETE | `/api/user/records/{id}` | 删除识别记录 |
-| GET/POST/DELETE | `/api/user/favorites` | 收藏管理 |
+| GET  | `/api/user/favorites` | 收藏列表（支持按 category 分类筛选） |
+| POST | `/api/user/favorites` | 添加收藏（参数 `herb_id`） |
+| DELETE | `/api/user/favorites/{herb_id}` | 取消收藏 |
 | POST | `/api/identify` | 上传图片识别中药 |
 | GET  | `/api/herbs` | 药材列表（分页+筛选） |
 | GET  | `/api/herbs/search` | 关键词搜索药材 |
@@ -170,8 +176,9 @@ herb-vision/
 3. 后端校验文件类型与大小（≤10MB），将图片保存至 `uploads/identify/`；
 4. 后端将图片转 base64，构造阶跃星辰 Step 3.7 Flash 多模态请求，附带《中国药典》标准的结构化提示词；
 5. 大模型返回 JSON 结构化识别结果（名称、性味、功效、鉴别要点、易混淆药材、置信度等）；
-6. 后端将结果写入 `identify_records` 表，并返回给前端展示；
-7. 用户可对结果进行收藏、反馈纠错，形成数据闭环。
+6. 后端将识别结果与知识库药材进行名称匹配，命中时返回知识库主图 `image_main`，前端拼接为完整 URL 展示；
+7. 后端将结果写入 `identify_records` 表，并返回给前端展示；
+8. 用户可对结果进行收藏、反馈纠错，形成数据闭环。
 
 ---
 
@@ -195,10 +202,13 @@ pip install -r requirements.txt
 copy .env.example .env          # Windows
 # cp .env.example .env          # macOS/Linux
 # 填入微信 appid/secret 与阶跃星辰 API_KEY
+# 若未配置微信凭证，登录接口会自动返回开发模拟用户，方便本地调试
 
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 访问 `http://localhost:8000/docs` 查看 API 文档。
+
+> **图片资源**：药材知识库配图已内置在 `backend/static/images/herbs/`，由 `.gitignore` 配置允许跟踪；运行时上传的识别图片保存在 `backend/uploads/`，不会被提交。
 
 ### 3. 前端启动
 ```bash
