@@ -8,7 +8,7 @@
           <text class="back__text">返回</text>
         </view>
         <view class="actions">
-          <text class="actions__btn" @click="onFavorite">{{ isFavorited ? '&#x2B50;' : '&#x2606;' }}</text>
+          <text v-if="result.herb_id" class="actions__btn" @click="onFavorite">{{ isFavorited ? '&#x2B50;' : '&#x2606;' }}</text>
           <text class="actions__btn actions__btn--primary" @click="onReidentify">重新识别</text>
         </view>
       </view>
@@ -132,8 +132,7 @@
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { addFavorite, removeFavorite } from '@/api/user'
-
-const BASE_URL = import.meta.env.VITE_BASE_URL || 'http://localhost:8000'
+import { resolveImageUrl } from '@/utils/common'
 
 const result = ref({})
 const rawResult = ref({})
@@ -148,14 +147,7 @@ const displayConfidence = computed(() => {
   return 0
 })
 
-const displayImage = computed(() => {
-  const img = result.value.image
-  if (!img) return ''
-  if (img.startsWith('http')) return img
-  // 相对路径补全为后端完整 URL
-  const path = img.startsWith('/') ? img : `/${img}`
-  return `${BASE_URL}${path}`
-})
+const displayImage = computed(() => resolveImageUrl(result.value.image))
 
 onLoad((query) => {
   if (query.data) {
@@ -209,18 +201,23 @@ function normalizeConfused(list) {
 }
 
 async function onFavorite() {
+  const herbId = result.value.herb_id
+  if (!herbId) {
+    uni.showToast({ title: '未识别到知识库药材', icon: 'none' })
+    return
+  }
   try {
     if (isFavorited.value) {
-      await removeFavorite(result.value.record_id)
+      await removeFavorite(herbId)
       isFavorited.value = false
       uni.showToast({ title: '已取消收藏', icon: 'none' })
     } else {
-      await addFavorite(result.value.record_id)
+      await addFavorite(herbId)
       isFavorited.value = true
       uni.showToast({ title: '收藏成功', icon: 'none' })
     }
   } catch (err) {
-    // 静默处理
+    uni.showToast({ title: '操作失败', icon: 'none' })
   }
 }
 

@@ -3,7 +3,7 @@
     <!-- 图：方图 + 编号水印 -->
     <view class="herb-card__image">
       <image
-        :src="herb.image_main || '/static/images/placeholder.png'"
+        :src="resolveImageUrl(herb.image_main)"
         mode="aspectFill"
         class="herb-card__img"
         @error="onImageError"
@@ -30,6 +30,8 @@
 </template>
 
 <script setup>
+import { resolveImageUrl } from '@/utils/common'
+
 const props = defineProps({
   herb: {
     type: Object,

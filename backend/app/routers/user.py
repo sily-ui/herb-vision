@@ -9,7 +9,9 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database.db import get_db
 from app.models.user import User
+from app.models.herb import Herb
 from app.models.identify_record import IdentifyRecord
+from app.models.favorite import Favorite
 from app.utils.auth import create_access_token, get_current_user
 
 router = APIRouter(prefix="/api", tags=["用户"])
@@ -179,67 +181,82 @@ async def delete_record(
 
 @router.get("/user/favorites")
 async def get_favorites(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    category: str = Query(None, description="按部位分类筛选"),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
     """获取收藏列表"""
-    query = db.query(IdentifyRecord).filter(
-        IdentifyRecord.user_id == current_user.id,
-        IdentifyRecord.is_favorited == True,
-    )
-    total = query.count()
-    records = query.order_by(IdentifyRecord.created_at.desc()).all()
+    query = db.query(Favorite).filter(Favorite.user_id == current_user.id)
+    favorites = query.order_by(Favorite.created_at.desc()).all()
 
     items = []
-    for record in records:
+    for fav in favorites:
+        herb = db.query(Herb).filter(Herb.id == fav.herb_id).first()
+        if herb is None:
+            continue
+        # 按部位分类筛选
+        if category and herb.category_part != category:
+            continue
         items.append({
-            "id": record.id,
-            "image_path": record.image_path,
-            "herb_name": record.herb_name,
-            "confidence": record.confidence,
-            "created_at": record.created_at.isoformat() if record.created_at else None,
+            "id": fav.id,
+            "herb_id": fav.herb_id,
+            "name": herb.name,
+            "family": herb.family or "",
+            "image_main": herb.image_main or "",
+            "category_part": herb.category_part or "",
+            "created_at": fav.created_at.isoformat() if fav.created_at else None,
         })
 
-    return {"total": total, "items": items}
+    total = len(items)
+    offset = (page - 1) * page_size
+    page_items = items[offset:offset + page_size]
+
+    return {"total": total, "page": page, "page_size": page_size, "items": page_items}
 
 
 @router.post("/user/favorites")
 async def add_favorite(
-    record_id: int = Query(..., description="识别记录ID"),
+    herb_id: int = Query(..., description="药材ID"),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
     """添加收藏"""
-    record = db.query(IdentifyRecord).filter(
-        IdentifyRecord.id == record_id,
-        IdentifyRecord.user_id == current_user.id,
+    herb = db.query(Herb).filter(Herb.id == herb_id).first()
+    if herb is None:
+        raise HTTPException(status_code=404, detail="药材不存在")
+
+    existing = db.query(Favorite).filter(
+        Favorite.user_id == current_user.id,
+        Favorite.herb_id == herb_id,
     ).first()
+    if existing:
+        return {"message": "已收藏"}
 
-    if record is None:
-        raise HTTPException(status_code=404, detail="记录不存在")
-
-    record.is_favorited = True
+    favorite = Favorite(user_id=current_user.id, herb_id=herb_id)
+    db.add(favorite)
     db.commit()
 
     return {"message": "收藏成功"}
 
 
-@router.delete("/user/favorites/{record_id}")
+@router.delete("/user/favorites/{herb_id}")
 async def remove_favorite(
-    record_id: int,
+    herb_id: int,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
     """取消收藏"""
-    record = db.query(IdentifyRecord).filter(
-        IdentifyRecord.id == record_id,
-        IdentifyRecord.user_id == current_user.id,
+    favorite = db.query(Favorite).filter(
+        Favorite.user_id == current_user.id,
+        Favorite.herb_id == herb_id,
     ).first()
 
-    if record is None:
-        raise HTTPException(status_code=404, detail="记录不存在")
+    if favorite is None:
+        raise HTTPException(status_code=404, detail="收藏不存在")
 
-    record.is_favorited = False
+    db.delete(favorite)
     db.commit()
 
     return {"message": "取消收藏成功"}

@@ -13,18 +13,7 @@
         <text class="user-block__edit-text">编辑</text>
       </view>
     </view>
-    <view class="user-block user-block--nologin" v-else>
-      <view class="user-block__avatar-wrap user-block__avatar-wrap--placeholder">
-        <text class="user-block__avatar-char">客</text>
-      </view>
-      <view class="user-block__info">
-        <text class="user-block__name">未登录</text>
-        <text class="user-block__id">登录后可同步数据</text>
-      </view>
-      <view class="user-block__login" @click="onLogin">
-        <text class="user-block__login-text">微信登录</text>
-      </view>
-    </view>
+
 
     <!-- 学习足迹 -->
     <view class="stats-card">
@@ -123,15 +112,6 @@ async function loadStats() {
   }
 }
 
-async function onLogin() {
-  try {
-    await userStore.login()
-    uni.showToast({ title: '登录成功', icon: 'none' })
-  } catch (err) {
-    uni.showToast({ title: '登录失败', icon: 'none' })
-  }
-}
-
 function onLogout() {
   uni.showModal({
     title: '提示',
@@ -140,6 +120,9 @@ function onLogout() {
       if (res.confirm) {
         userStore.logout()
         uni.showToast({ title: '已退出', icon: 'none' })
+        setTimeout(() => {
+          uni.reLaunch({ url: '/pages/login/index' })
+        }, 300)
       }
     }
   })

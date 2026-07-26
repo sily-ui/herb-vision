@@ -20,7 +20,11 @@ env/
 *.db
 *.sqlite3
 backend/uploads/
-backend/static/
+backend/static/*
+!backend/static/images/
+backend/static/images/*
+!backend/static/images/herbs/
+!backend/static/images/herbs/**
 
 # ===== Node / 前端构建产物 =====
 node_modules/

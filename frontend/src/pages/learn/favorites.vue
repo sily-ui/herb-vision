@@ -47,6 +47,7 @@ import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/store/user'
 import { getFavorites, removeFavorite } from '@/api/user'
+import { resolveImageUrl } from '@/utils/common'
 import CategoryNav from '@/components/CategoryNav.vue'
 
 const userStore = useUserStore()
@@ -56,10 +57,10 @@ const currentFilter = ref('')
 
 const filterCategories = ref([
   { name: '全部', value: '' },
-  { name: '根及根茎', value: 'root' },
-  { name: '花', value: 'flower' },
-  { name: '果实种子', value: 'fruit' },
-  { name: '全草', value: 'herb' }
+  { name: '根及根茎', value: '根及根茎' },
+  { name: '花', value: '花' },
+  { name: '果实种子', value: '果实种子' },
+  { name: '全草或叶', value: '全草或叶' }
 ])
 
 onShow(() => {
@@ -81,7 +82,11 @@ async function loadFavorites() {
     const params = { page: 1, pageSize: 50 }
     if (currentFilter.value) params.category = currentFilter.value
     const data = await getFavorites(params)
-    favoriteList.value = data.items || data.list || data || []
+    const list = data.items || data.list || data || []
+    favoriteList.value = list.map((item) => ({
+      ...item,
+      image: resolveImageUrl(item.image_main || item.image)
+    }))
   } catch (err) {
     favoriteList.value = []
   } finally {
@@ -102,7 +107,7 @@ function onFilterSelect({ item }) {
  */
 async function onRemoveFavorite(item, index) {
   try {
-    await removeFavorite(item.id)
+    await removeFavorite(item.herb_id)
     favoriteList.value.splice(index, 1)
     uni.showToast({ title: '已取消收藏', icon: 'none' })
   } catch (err) {
@@ -115,7 +120,7 @@ async function onRemoveFavorite(item, index) {
  */
 function goDetail(item) {
   uni.navigateTo({
-    url: `/pages/knowledge/detail?id=${item.id}`
+    url: `/pages/knowledge/detail?id=${item.herb_id}`
   })
 }
 </script>

@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.database.db import get_db
 from app.models.herb import Herb
+from app.models.favorite import Favorite
 from app.services.knowledge_service import (
     get_herbs,
     get_herb_by_id,
@@ -11,6 +12,7 @@ from app.services.knowledge_service import (
     compare_herbs,
 )
 from app.services.ai_service import ai_compare_herbs
+from app.utils.auth import get_current_user, get_current_user_optional
 
 router = APIRouter(prefix="/api/herbs", tags=["知识库"])
 
@@ -108,12 +110,22 @@ async def ai_compare_herbs_api(
 async def get_herb_detail(
     herb_id: int,
     db: Session = Depends(get_db),
+    current_user=Depends(get_current_user_optional),
 ):
     """获取药材详情"""
     herb = get_herb_by_id(db, herb_id)
     if herb is None:
         raise HTTPException(status_code=404, detail="药材不存在")
-    return _herb_to_dict(herb)
+    result = _herb_to_dict(herb)
+    if current_user:
+        favorite = db.query(Favorite).filter(
+            Favorite.user_id == current_user.id,
+            Favorite.herb_id == herb_id,
+        ).first()
+        result["is_favorited"] = favorite is not None
+    else:
+        result["is_favorited"] = False
+    return result
 
 
 def _herb_to_dict(herb: Herb) -> dict:

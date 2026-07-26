@@ -34,6 +34,7 @@ def init_db():
     """初始化数据库：创建所有表 + 导入初始药材数据"""
     # 导入所有模型以便 create_all 能发现它们
     from app.models import Herb  # noqa: F401
+    from app.models.favorite import Favorite  # noqa: F401
 
     # 创建所有表
     Base.metadata.create_all(bind=engine)

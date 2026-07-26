@@ -1,12 +1,8 @@
 <template>
   <view class="page-detail">
-    <!-- 顶部图：去圆角，方框，左上角印章 -->
+    <!-- 顶部图：单张静态图，左上角印章 -->
     <view class="banner">
-      <swiper class="banner__swiper" indicator-dots indicator-color="rgba(168,54,47,0.3)" indicator-active-color="#A8362F" autoplay circular>
-        <swiper-item v-for="(img, index) in bannerImages" :key="index">
-          <image :src="img" mode="aspectFill" class="banner__img" />
-        </swiper-item>
-      </swiper>
+      <image :src="bannerImages[0] || '/static/images/placeholder.png'" mode="aspectFill" class="banner__img" />
       <view class="banner__seal" v-if="herb.id">
         <text class="banner__seal-text">No.{{ String(herb.id).padStart(3, '0') }}</text>
       </view>
@@ -164,9 +160,12 @@ import { onLoad } from '@dcloudio/uni-app'
 import { getHerbDetail } from '@/api/knowledge'
 import { addFavorite, removeFavorite } from '@/api/user'
 import { useHerbStore } from '@/store/herb'
+import { useUserStore } from '@/store/user'
 import { saveHerbCache } from '@/utils/cache'
+import { resolveImageUrl } from '@/utils/common'
 
 const herbStore = useHerbStore()
+const userStore = useUserStore()
 
 const herb = ref({})
 const isFavorited = ref(false)
@@ -180,12 +179,12 @@ async function loadHerbDetail(id) {
   try {
     const data = await getHerbDetail(id)
     herb.value = data
-    isFavorited.value = data.isFavorited || false
+    isFavorited.value = data.is_favorited || data.isFavorited || false
 
     const images = []
-    if (data.image) images.push(data.image)
-    if (data.microscopicImage) images.push(data.microscopicImage)
-    if (data.processedImage) images.push(data.processedImage)
+    if (data.image_main) images.push(resolveImageUrl(data.image_main))
+    if (data.image_microscopic) images.push(resolveImageUrl(data.image_microscopic))
+    if (data.image_processed) images.push(resolveImageUrl(data.image_processed))
     if (!images.length) images.push('/static/images/placeholder.png')
     bannerImages.value = images
 
@@ -194,7 +193,7 @@ async function loadHerbDetail(id) {
     herbStore.addRecentViewed({
       id: data.id,
       name: data.name,
-      image: data.image
+      image: resolveImageUrl(data.image_main)
     })
   } catch (err) {
     uni.showToast({ title: '加载失败', icon: 'none' })
@@ -202,6 +201,10 @@ async function loadHerbDetail(id) {
 }
 
 async function onToggleFavorite() {
+  if (!userStore.isLogin) {
+    uni.showToast({ title: '请先登录', icon: 'none' })
+    return
+  }
   try {
     if (isFavorited.value) {
       await removeFavorite(herb.value.id)
@@ -212,7 +215,9 @@ async function onToggleFavorite() {
       isFavorited.value = true
       uni.showToast({ title: '收藏成功', icon: 'none' })
     }
-  } catch (err) {}
+  } catch (err) {
+    uni.showToast({ title: '操作失败', icon: 'none' })
+  }
 }
 </script>
 
@@ -229,11 +234,6 @@ async function onToggleFavorite() {
   width: 100%;
   height: 480rpx;
   background-color: $paper-deep;
-
-  &__swiper {
-    width: 100%;
-    height: 100%;
-  }
 
   &__img {
     width: 100%;

@@ -141,6 +141,7 @@ import { onShow } from '@dcloudio/uni-app'
 import { useHerbStore } from '@/store/herb'
 import { getFavorites, getRecords } from '@/api/user'
 import { getHerbs } from '@/api/knowledge'
+import { resolveImageUrl } from '@/utils/common'
 
 const herbStore = useHerbStore()
 
@@ -222,7 +223,7 @@ async function loadRecommend() {
 
     recommendList.value = pool.slice(0, 4).map((item) => ({
       ...item,
-      image: item.image_main || item.image || '/static/images/placeholder.png',
+      image: resolveImageUrl(item.image_main || item.image),
       category_part: item.category_part || item.part_used || '草本',
       efficacy: item.efficacy || item.nature_taste || '草本药材'
     }))
@@ -263,10 +264,17 @@ function calcStreak() {
   }
   weekDays.value = week
 
+  // 连续天数：从昨天往前数连续活跃天数，如果今天也活跃则 +1
   let streak = 0
-  for (let i = 0; i < week.length; i++) {
+  // 今天是否活跃
+  const todayActive = week[week.length - 1].active
+  // 从昨天开始往前数（倒数第2个到第1个）
+  for (let i = week.length - 2; i >= 0; i--) {
     if (week[i].active) streak++
     else break
+  }
+  if (todayActive && streak >= 0) {
+    streak++
   }
   streakDays.value = streak
 }

@@ -64,10 +64,18 @@ function handleResponse(response) {
  */
 export function get(url, params = {}, options = {}) {
   return new Promise((resolve, reject) => {
+    // 过滤掉 undefined / null / 空字符串，避免后端把 "undefined" 当作查询值
+    const cleanParams = {}
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') {
+        cleanParams[k] = v
+      }
+    })
+
     uni.request({
       url: BASE_URL + url,
       method: 'GET',
-      data: params,
+      data: cleanParams,
       header: getRequestHeader(),
       timeout: options.timeout || TIMEOUT,
       success: (res) => {
@@ -104,6 +112,31 @@ export function post(url, data = {}, options = {}) {
       url: fullUrl,
       method: 'POST',
       data,
+      header: getRequestHeader(),
+      timeout: options.timeout || TIMEOUT,
+      success: (res) => {
+        handleResponse(res).then(resolve).catch(reject)
+      },
+      fail: (err) => {
+        const e = new Error('网络请求失败')
+        e.code = -1
+        if (!options.silent) {
+          uni.showToast({ title: '网络请求失败', icon: 'none' })
+        }
+        reject(e)
+      }
+    })
+  })
+}
+
+/**
+ * DELETE请求
+ */
+export function del(url, options = {}) {
+  return new Promise((resolve, reject) => {
+    uni.request({
+      url: BASE_URL + url,
+      method: 'DELETE',
       header: getRequestHeader(),
       timeout: options.timeout || TIMEOUT,
       success: (res) => {

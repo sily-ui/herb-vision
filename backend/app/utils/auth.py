@@ -10,6 +10,7 @@ from app.database.db import SessionLocal
 
 # Bearer Token 方式
 security = HTTPBearer()
+optional_security = HTTPBearer(auto_error=False)
 
 
 def create_access_token(data: dict) -> str:
@@ -89,3 +90,15 @@ async def get_current_user(
         return user
     finally:
         db.close()
+
+
+async def get_current_user_optional(
+    credentials: HTTPAuthorizationCredentials = Depends(optional_security),
+):
+    """可选认证，未登录返回 None"""
+    if credentials is None:
+        return None
+    try:
+        return await get_current_user(credentials)
+    except HTTPException:
+        return None

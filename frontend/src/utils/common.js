@@ -3,6 +3,25 @@
  */
 
 /**
+ * 解析后端图片路径为完整 URL
+ * 后端返回 /static/images/herbs/xxx.png 这样的相对路径，
+ * 前端需要拼接 BASE_URL 才能正常加载
+ * @param {string} path - 图片路径
+ * @returns {string} 完整 URL 或本地占位图路径
+ */
+export function resolveImageUrl(path) {
+  if (!path) return '/static/images/placeholder.png'
+  if (path.startsWith('http')) return path
+  // 后端返回的药材图片等资源路径，拼接 BASE_URL
+  if (path.includes('/images/herbs/') || path.includes('/images/identify/')) {
+    const BASE_URL = import.meta.env.VITE_BASE_URL || 'http://localhost:8000'
+    return `${BASE_URL}${path}`
+  }
+  // 小程序本地 static 资源
+  return path
+}
+
+/**
  * 格式化日期
  * @param {number|string|Date} timestamp - 时间戳或日期对象
  * @param {string} format - 格式类型 'full'|'date'|'time'|'relative'

@@ -43,17 +43,21 @@ function onSelect(index, item) {
 <style lang="scss" scoped>
 .category-nav {
   white-space: nowrap;
-  padding: $space-sm 0;
+  padding: $space-sm $space-md;
   display: flex;
-  gap: $space-md;
 
   &__item {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: $space-xs 0;
+    padding: $space-xs $space-md;
+    margin-right: $space-sm;
     flex-shrink: 0;
     position: relative;
+
+    &:last-child {
+      margin-right: 0;
+    }
 
     &--active {
       .category-nav__text {

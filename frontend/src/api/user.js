@@ -1,7 +1,7 @@
 /**
  * 用户相关接口
  */
-import { get, post } from './request'
+import { get, post, del } from './request'
 
 /**
  * 微信登录
@@ -48,28 +48,29 @@ export function deleteRecord(id) {
 
 /**
  * 获取收藏列表
- * @param {object} params - 查询参数 { page, pageSize }
+ * @param {object} params - 查询参数 { page, pageSize, category }
  */
 export function getFavorites(params = {}) {
-  const { page, pageSize } = params
+  const { page, pageSize, category } = params
   return get('/api/user/favorites', {
     page: page || 1,
-    page_size: pageSize || 20
+    page_size: pageSize || 20,
+    category: category || undefined
   })
 }
 
 /**
- * 添加收藏（后端期望 query 参数 record_id）
- * @param {string|number} recordId - 记录/药材ID
+ * 添加收藏
+ * @param {string|number} herbId - 药材ID
  */
-export function addFavorite(recordId) {
-  return post('/api/user/favorites', null, { params: { record_id: recordId } })
+export function addFavorite(herbId) {
+  return post('/api/user/favorites', null, { params: { herb_id: herbId } })
 }
 
 /**
  * 取消收藏
- * @param {string|number} recordId - 记录/药材ID
+ * @param {string|number} herbId - 药材ID
  */
-export function removeFavorite(recordId) {
-  return post(`/api/user/favorites/${recordId}/delete`)
+export function removeFavorite(herbId) {
+  return del(`/api/user/favorites/${herbId}`)
 }

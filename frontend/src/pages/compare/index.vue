@@ -35,11 +35,11 @@
         <text class="compare-card__title">外观对比</text>
         <view class="compare-images">
           <view class="compare-images__item">
-            <image :src="herb1.image_main || '/static/images/placeholder.png'" mode="aspectFill" class="compare-images__img" @error="onImageError(1)" />
+            <image :src="resolveImageUrl(herb1.image_main)" mode="aspectFill" class="compare-images__img" @error="onImageError(1)" />
             <text class="compare-images__name">{{ herb1.name }}</text>
           </view>
           <view class="compare-images__item">
-            <image :src="herb2.image_main || '/static/images/placeholder.png'" mode="aspectFill" class="compare-images__img" @error="onImageError(2)" />
+            <image :src="resolveImageUrl(herb2.image_main)" mode="aspectFill" class="compare-images__img" @error="onImageError(2)" />
             <text class="compare-images__name">{{ herb2.name }}</text>
           </view>
         </view>
@@ -89,6 +89,7 @@
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { compareHerbs, getHerbDetail, aiCompareHerbs } from '@/api/knowledge'
+import { resolveImageUrl } from '@/utils/common'
 
 const herb1 = ref({})
 const herb2 = ref({})
