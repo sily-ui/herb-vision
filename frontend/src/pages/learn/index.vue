@@ -156,6 +156,7 @@ const weekDays = ref([])
 onShow(() => {
   recentViewed.value = herbStore.recentViewed
   viewCount.value = herbStore.recentViewed.length
+  recordTodayStudy()
   loadStats()
   loadRecommend()
   calcStreak()
@@ -244,18 +245,65 @@ function goDetail(item) {
   uni.navigateTo({ url: `/pages/knowledge/detail?id=${item.id}` })
 }
 
+/**
+ * 记录今天的学习足迹（按天去重）
+ * 只要用户进过学习页（tab 切换、切后台回来都算）就记一次
+ */
+function recordTodayStudy() {
+  const d = new Date()
+  const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  try {
+    const raw = uni.getStorageSync('studyLog') || {}
+    // 兜底：兼容旧数据可能是数组/字符串
+    let log = {}
+    if (typeof raw === 'object' && !Array.isArray(raw)) {
+      log = raw
+    } else if (typeof raw === 'string') {
+      try { log = JSON.parse(raw) || {} } catch { log = {} }
+    }
+    if (log[key]) return // 今天已记过
+    log[key] = true
+    // 只保留最近 60 天的记录，避免 storage 无限增长
+    const keys = Object.keys(log).sort()
+    if (keys.length > 60) {
+      const trimmed = {}
+      keys.slice(-60).forEach((k) => { trimmed[k] = true })
+      log = trimmed
+    }
+    uni.setStorageSync('studyLog', log)
+  } catch (e) {
+    // 静默失败，不影响主流程
+  }
+}
+
+function getStudyLog() {
+  try {
+    const raw = uni.getStorageSync('studyLog') || {}
+    if (typeof raw === 'object' && !Array.isArray(raw)) return raw
+    if (typeof raw === 'string') {
+      try { return JSON.parse(raw) || {} } catch { return {} }
+    }
+    return {}
+  } catch {
+    return {}
+  }
+}
+
+function formatDateKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 function calcStreak() {
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
   const days = ['日', '一', '二', '三', '四', '五', '六']
+  const log = getStudyLog()
   const week = []
   for (let i = 6; i >= 0; i--) {
     const d = new Date(today - i * 86400000)
     const isToday = i === 0
-    const dateStr = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
-    const hasActivity = herbStore.recentViewed.some(
-      (item) => item.viewedAt && new Date(item.viewedAt).toDateString() === d.toDateString()
-    )
+    const key = formatDateKey(d)
+    const hasActivity = !!log[key]
     week.push({
       label: days[d.getDay()],
       active: hasActivity,
@@ -264,16 +312,14 @@ function calcStreak() {
   }
   weekDays.value = week
 
-  // 连续天数：从昨天往前数连续活跃天数，如果今天也活跃则 +1
+  // 连续天数：今天算 1，从昨天往前数连续活跃天数
   let streak = 0
-  // 今天是否活跃
   const todayActive = week[week.length - 1].active
-  // 从昨天开始往前数（倒数第2个到第1个）
   for (let i = week.length - 2; i >= 0; i--) {
     if (week[i].active) streak++
     else break
   }
-  if (todayActive && streak >= 0) {
+  if (todayActive) {
     streak++
   }
   streakDays.value = streak

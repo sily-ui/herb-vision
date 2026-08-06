@@ -7,15 +7,28 @@
 
     <!-- 搜索结果列表 -->
     <view class="result-list" v-if="searchResults.length">
-      <HerbCard
+      <view
         v-for="(item, index) in searchResults"
         :key="index"
-        :herb="item"
-        :navigate="!selectMode"
-        class="result-list__item"
-        :class="{ 'result-list__item--selected': selectMode && selectedId === item.id }"
-        @click="onHerbClick(item)"
-      />
+        class="result-list__item-wrap"
+        :class="{ 'result-list__item-wrap--selected': selectedId === item.id }"
+        @click="onWrapClick(item)"
+      >
+        <HerbCard
+          :herb="item"
+          :navigate="false"
+          class="result-list__item"
+        />
+        <!-- 显式勾选框（通用选择模式或对比选择模式都显示） -->
+        <view
+          v-if="selectMode"
+          class="select-circle"
+          :class="{ 'select-circle--active': selectedId === item.id }"
+          @click.stop="onWrapClick(item)"
+        >
+          <text v:if="selectedId === item.id" class="select-circle__icon">&#x2713;</text>
+        </view>
+      </view>
     </view>
 
     <!-- 无结果 -->
@@ -58,12 +71,16 @@
     </view>
 
     <!-- 选择模式底部确认栏 -->
-    <view class="select-bar" v-if="selectMode && selectedHerb.id">
+    <view class="select-bar" v-if="selectMode">
       <view class="select-bar__info">
         <text class="select-bar__label">已选择</text>
-        <text class="select-bar__name">{{ selectedHerb.name }}</text>
+        <text class="select-bar__name">{{ selectedName || '请勾选药材' }}</text>
       </view>
-      <view class="select-bar__btn" @click="confirmSelect">
+      <view
+        class="select-bar__btn"
+        :class="{ 'select-bar__btn--disabled': !selectedId }"
+        @click="confirmSelect"
+      >
         <text class="select-bar__btn-text">确认选择</text>
       </view>
     </view>
@@ -89,8 +106,9 @@ const searched = ref(false)
 const searchHistory = ref(herbStore.searchHistory)
 const selectMode = ref(false)
 const selectSide = ref(0)
-const selectedHerb = ref({})
-const selectedId = computed(() => selectedHerb.value.id)
+// 用基本类型存储，避免 ref 包装对象在跨函数传值时的引用问题
+const selectedId = ref(null)
+const selectedName = ref('')
 
 const hotKeywords = ref([
   '人参', '黄芪', '当归', '甘草', '白芍',
@@ -102,6 +120,11 @@ onLoad((query) => {
   if (query.select && query.select.startsWith('compare')) {
     selectMode.value = true
     selectSide.value = Number(query.select.replace('compare', '')) || 0
+  }
+  // 通用选择模式：来自意见反馈页等（mode=select）
+  if (query.mode === 'select') {
+    selectMode.value = true
+    selectSide.value = 0
   }
   if (query.keyword) {
     onSearch(query.keyword)
@@ -127,21 +150,51 @@ async function onSearch(keyword) {
 }
 
 /**
- * 点击药材卡片
+ * 卡片（或勾选框）点击：单选切换
+ * 不再直接 confirmSelect，由底部"确认选择"统一返回
  */
-function onHerbClick(item) {
+function onWrapClick(item) {
   if (!selectMode.value) return
-  selectedHerb.value = item
+  if (!item || item.id == null) return
+  // 同一卡片再次点击取消选中；不同卡片则切换
+  if (selectedId.value === item.id) {
+    selectedId.value = null
+    selectedName.value = ''
+  } else {
+    selectedId.value = item.id
+    selectedName.value = item.name || ''
+  }
 }
 
 /**
- * 确认选择并返回对比页
+ * 确认选择并返回上一页
+ * @param {object} [herb] 兼容旧 API：直接传入药材对象
  */
-function confirmSelect() {
-  const pages = getCurrentPages()
-  const prevPage = pages[pages.length - 2]
-  if (prevPage && prevPage.$vm && prevPage.$vm.onHerbSelected) {
-    prevPage.$vm.onHerbSelected(selectSide.value, selectedHerb.value)
+function confirmSelect(herb) {
+  // 优先用传入对象，否则用本地选中状态
+  let data = null
+  if (herb && herb.id) {
+    data = { id: herb.id, name: herb.name || '' }
+  } else if (selectedId.value) {
+    data = { id: selectedId.value, name: selectedName.value }
+  }
+
+  if (!data || !data.id) {
+    uni.showToast({ title: '请先选择药材', icon: 'none' })
+    return
+  }
+
+  // 通用选择模式：写到本地存储并触发全局事件（双保险）
+  if (!selectSide.value) {
+    try { uni.setStorageSync('__selectedHerb', data) } catch (e) {}
+    uni.$emit('selectHerb', data)
+  } else {
+    // 对比页选择模式：兼容旧逻辑
+    const pages = getCurrentPages()
+    const prevPage = pages[pages.length - 2]
+    if (prevPage && prevPage.$vm && prevPage.$vm.onHerbSelected) {
+      prevPage.$vm.onHerbSelected(selectSide.value, data)
+    }
   }
   uni.navigateBack()
 }
@@ -173,7 +226,46 @@ function onClearHistory() {
   gap: $spacing-md;
 
   &__item {
+    width: 100%;
+  }
+
+  &__item-wrap {
+    position: relative;
     width: calc(50% - 12rpx);
+
+    &--selected {
+      box-shadow: 0 0 0 4rpx $primary-color;
+      border-radius: $radius-md;
+    }
+  }
+}
+
+/* 显式勾选框：卡片右上角 */
+.select-circle {
+  position: absolute;
+  top: 12rpx;
+  right: 12rpx;
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.95);
+  border: 2rpx solid $line-strong;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.12);
+
+  &--active {
+    background-color: $primary-color;
+    border-color: $primary-color;
+  }
+
+  &__icon {
+    color: #FFFFFF;
+    font-size: 28rpx;
+    font-weight: $weight-bold;
+    line-height: 1;
   }
 }
 
@@ -270,6 +362,11 @@ function onClearHistory() {
     padding: $spacing-sm $spacing-lg;
     background-color: $primary-color;
     border-radius: $radius-lg;
+    transition: opacity 0.2s;
+
+    &--disabled {
+      opacity: 0.4;
+    }
 
     &-text {
       font-size: $font-md;

@@ -13,14 +13,6 @@
       "postcss": true,
       "minified": true
     },
-    "usingComponents": true,
-    "permission": {
-      "scope.camera": {
-        "desc": "用于拍照识别中药材"
-      },
-      "scope.writePhotosAlbum": {
-        "desc": "用于保存识别结果图片"
-      }
-    }
+    "usingComponents": true
   }
 }

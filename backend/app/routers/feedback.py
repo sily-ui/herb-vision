@@ -1,5 +1,6 @@
 """反馈接口路由"""
 from datetime import datetime
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -14,10 +15,10 @@ router = APIRouter(prefix="/api/feedback", tags=["反馈"])
 
 class FeedbackCreateRequest(BaseModel):
     """提交反馈请求"""
-    herb_id: int = None
+    herb_id: Optional[int] = None
     feedback_type: str  # identify_error / data_missing / other
     content: str
-    image_path: str = None
+    image_path: Optional[str] = None
 
 
 @router.post("")

@@ -62,7 +62,7 @@
  * 用户提交识别错误、资料缺失等反馈
  */
 import { ref } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 import { submitFeedback } from '@/api/feedback'
 import { upload } from '@/api/request'
 
@@ -81,10 +81,39 @@ const form = ref({
 const selectedHerbName = ref('')
 const imageList = ref([])
 
+/**
+ * 接收从知识库搜索页回传的选中药材
+ */
+function applySelectedHerb(data) {
+  if (!data || !data.id) return
+  form.value.herb_id = data.id
+  selectedHerbName.value = data.name
+}
+
 onLoad((query) => {
   if (query.herbId) {
     form.value.herb_id = parseInt(query.herbId)
   }
+})
+
+// 每次页面回到前台都尝试从本地存储读取，确保不丢数据
+onShow(() => {
+  try {
+    const data = uni.getStorageSync('__selectedHerb')
+    if (data && data.id) {
+      applySelectedHerb(data)
+      uni.removeStorageSync('__selectedHerb')
+    }
+  } catch (e) {}
+})
+
+// 监听全局事件（同时兜底）
+function onSelectHerbEvent(data) {
+  applySelectedHerb(data)
+}
+uni.$on('selectHerb', onSelectHerbEvent)
+onUnload(() => {
+  uni.$off('selectHerb', onSelectHerbEvent)
 })
 
 /**
@@ -92,13 +121,7 @@ onLoad((query) => {
  */
 function onSelectHerb() {
   uni.navigateTo({
-    url: '/pages/knowledge/search?mode=select',
-    events: {
-      selectHerb: (data) => {
-        form.value.herb_id = data.id
-        selectedHerbName.value = data.name
-      }
-    }
+    url: '/pages/knowledge/search?mode=select'
   })
 }
 
@@ -150,13 +173,19 @@ async function onSubmit() {
       feedback_type: form.value.feedback_type,
       herb_id: form.value.herb_id,
       content: form.value.content,
-      image_paths: imagePaths
+      image_path: imagePaths.join(',')
     })
 
     uni.hideLoading()
     uni.showToast({ title: '提交成功，感谢反馈', icon: 'none' })
     setTimeout(() => {
-      uni.navigateBack()
+      // 优先返回上一页；若无上一页（页面栈只有自己）则跳回"我的"
+      const pages = getCurrentPages()
+      if (pages.length > 1) {
+        uni.navigateBack()
+      } else {
+        uni.switchTab({ url: '/pages/mine/index' })
+      }
     }, 1500)
   } catch (err) {
     uni.hideLoading()

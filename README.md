@@ -158,11 +158,12 @@ herb-vision/
 | POST | `/api/user/favorites` | 添加收藏（参数 `herb_id`） |
 | DELETE | `/api/user/favorites/{herb_id}` | 取消收藏 |
 | POST | `/api/identify` | 上传图片识别中药 |
+| POST | `/api/upload` | 上传图片（反馈/识别通用，需登录） |
 | GET  | `/api/herbs` | 药材列表（分页+筛选） |
 | GET  | `/api/herbs/search` | 关键词搜索药材 |
 | GET  | `/api/herbs/compare` | 对比两种药材 |
 | GET  | `/api/herbs/{id}` | 药材详情 |
-| POST | `/api/feedback` | 提交反馈 |
+| POST | `/api/feedback` | 提交反馈（herb_id 可空，支持多图 image_path 逗号拼接） |
 | GET  | `/api/feedback` | 反馈列表（管理端） |
 
 启动后端后访问 `http://localhost:8000/docs` 可查看完整的 Swagger 自动文档。
@@ -257,6 +258,34 @@ npm run dev:mp-weixin           # 微信小程序开发模式
 
 ---
 
-## 十三、License
+## 十三、最近更新（2026-08-06）
+
+本次迭代围绕**反馈闭环、资料编辑、学习激励、素材关联**四条线进行端到端修复。
+
+### 1. 意见反馈功能完善
+- 后端：`FeedbackCreateRequest.herb_id` 由 `int = None` 改为 `Optional[int] = None`（Pydantic v2 兼容 null），新增通用 `POST /api/upload` 图片上传接口（需登录，自动校验类型/大小，存到 `uploads/feedback/`）。
+- 前端 `feedback/index.vue`：字段名对齐 `image_path`（多图用逗号拼接）、提交成功后通过 `getCurrentPages().length` 智能判断 `navigateBack` 还是 `switchTab` 回首页。
+
+### 2. 关联药材显式勾选
+- 知识库 `search.vue` 新增**选择模式**：药材卡片右上角圆形勾选框 + 底部"已选择 ｜ 确认选择"固定操作栏，点击卡片或勾选框均可切换选中。
+- 返回机制采用**双保险**：`uni.setStorageSync('__selectedHerb', data)` 落本地 + `uni.$emit('selectHerb', data)` 全局事件，兼容 H5 与小程序 onShow 时序差异。
+- 关键修复：原 `selectedHerb = ref({})` 在小程序端 `data.id` 解包异常，改为只用基本类型 `selectedId` / `selectedName`，避开 Vue 响应式 proxy 在边界场景的陷阱。
+
+### 3. 编辑资料保存
+- 后端 `/api/user/profile` HTTP 方法由 PUT 改为 POST（与前端对齐），状态码 405 报错消失。
+- 关键修复：前端 `userStore.nickname = ...` 触发 `TypeError: 'set' on proxy`，根因是 Pinia 把 `nickname` / `avatar` 定义为 getter。改为更新 `userStore.userInfo` 对象本身 + `uni.setStorageSync('userInfo')`，getter 会自动重算。
+
+### 4. 学习足迹按日记录
+- 旧逻辑：必须浏览过详情页（`recentViewed.viewedAt`）才点亮当日圆点。
+- 新逻辑：用户每次进入"学习" tab 即按日去重写入 `studyLog`（storage key 为 `YYYY-MM-DD`），同一天多次进入只算一次，自动滚动保留 60 天记录。
+- `calcStreak` 改为读 studyLog，7 个圆点 + "已连续 N 天" 真实反映用户活跃度。
+
+### 5. 微信小程序配置
+- 移除 `manifest.json` 中已废弃的 `permission.scope.camera` / `scope.writePhotosAlbum` 声明，修复 `invalid app.json permission[...]` 警告（基础库 3.x 已不再需要前置声明，`wx.chooseMedia` 运行时按需弹窗）。
+- 提供开发期标准操作：微信开发者工具 → 详情 → 本地设置 → 勾选"不校验合法域名、HTTPS 证书"，避免 HTTP 本地图片被拦截。
+
+---
+
+## 十四、License
 
 本项目仅用于学习与毕业设计，数据来源于公开药典资料，如有侵权请联系删除。

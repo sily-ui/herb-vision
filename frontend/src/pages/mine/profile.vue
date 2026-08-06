@@ -96,14 +96,22 @@ async function onSave() {
       avatar_url: form.value.avatar_url,
       phone: form.value.phone
     })
-    userStore.nickname = form.value.nickname
-    userStore.avatar = form.value.avatar_url
+    // 更新 Pinia store：nickname/avatar 是 getter，必须改 userInfo 对象本身
+    userStore.userInfo = {
+      ...userStore.userInfo,
+      nickname: form.value.nickname,
+      avatar: form.value.avatar_url,
+      phone: form.value.phone
+    }
+    uni.setStorageSync('userInfo', userStore.userInfo)
     uni.showToast({ title: '保存成功', icon: 'none' })
     setTimeout(() => {
       uni.navigateBack()
     }, 1500)
   } catch (err) {
-    uni.showToast({ title: '保存失败', icon: 'none' })
+    const detail = err?.message || JSON.stringify(err) || '未知错误'
+    uni.showToast({ title: '保存失败：' + detail, icon: 'none', duration: 3000 })
+    console.error('保存失败:', err)
   }
 }
 </script>
